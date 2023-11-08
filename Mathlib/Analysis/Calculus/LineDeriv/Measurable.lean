@@ -20,6 +20,7 @@ directed by `v`.
 -/
 
 open MeasureTheory
+open TopologicalSpace (SecondCountableTopology)
 
 variable {𝕜 : Type*} [NontriviallyNormedField 𝕜] [LocallyCompactSpace 𝕜]
   {E : Type*} [NormedAddCommGroup E] [NormedSpace 𝕜 E] [MeasurableSpace E] [OpensMeasurableSpace E]

@@ -250,10 +250,14 @@ end SMul
 instance : Zero (P1 →ᵃ[k] V2) where zero := ⟨0, 0, fun _ _ => (zero_vadd _ _).symm⟩
 
 instance : Add (P1 →ᵃ[k] V2) where
-  add f g := ⟨f + g, f.linear + g.linear, fun p v => by simp [add_add_add_comm]⟩
+  add f g := ⟨f + g, f.linear + g.linear,
+      -- porting note: `simp` needs lemmas to be expressions
+      fun p v => by simp [add_add_add_comm, (map_vadd)]⟩
 
 instance : Sub (P1 →ᵃ[k] V2) where
-  sub f g := ⟨f - g, f.linear - g.linear, fun p v => by simp [sub_add_sub_comm]⟩
+  sub f g := ⟨f - g, f.linear - g.linear,
+      -- porting note: `simp` needs lemmas to be expressions
+      fun p v => by simp [sub_add_sub_comm, (map_vadd)]⟩
 
 instance : Neg (P1 →ᵃ[k] V2) where
   neg f := ⟨-f, -f.linear, fun p v => by simp [add_comm, map_vadd f]⟩
@@ -308,12 +312,16 @@ from `P1` to the vector space `V2` corresponding to `P2`. -/
 instance : AffineSpace (P1 →ᵃ[k] V2) (P1 →ᵃ[k] P2) where
   vadd f g :=
     ⟨fun p => f p +ᵥ g p, f.linear + g.linear,
-      fun p v => by simp [vadd_vadd, add_right_comm]⟩
+      -- porting note: `simp` needs lemmas to be expressions
+      letI : AddAction V2 P2 := inferInstance
+      fun p v => by simp [vadd_vadd, add_right_comm, (map_vadd)]⟩
   zero_vadd f := ext fun p => zero_vadd _ (f p)
   add_vadd f₁ f₂ f₃ := ext fun p => add_vadd (f₁ p) (f₂ p) (f₃ p)
   vsub f g :=
     ⟨fun p => f p -ᵥ g p, f.linear - g.linear, fun p v => by
-      simp [vsub_vadd_eq_vsub_sub, vadd_vsub_assoc, add_sub, sub_add_eq_add_sub]⟩
+      -- porting note: `simp` needs lemmas to be expressions
+      simp [(map_vadd), (vsub_vadd_eq_vsub_sub), (vadd_vsub_assoc),
+        add_sub, sub_add_eq_add_sub]⟩
   vsub_vadd' f g := ext fun p => vsub_vadd (f p) (g p)
   vadd_vsub' f g := ext fun p => vadd_vsub (f p) (g p)
 
@@ -534,7 +542,9 @@ theorem lineMap_linear (p₀ p₁ : P1) :
 #align affine_map.line_map_linear AffineMap.lineMap_linear
 
 theorem lineMap_same_apply (p : P1) (c : k) : lineMap p p c = p := by
-  simp [lineMap_apply]
+  letI : AddAction V1 P1 := inferInstance
+  -- porting note: `simp` needs lemmas to be expressions
+  simp [(lineMap_apply), (vsub_self)]
 #align affine_map.line_map_same_apply AffineMap.lineMap_same_apply
 
 @[simp]
@@ -544,12 +554,15 @@ theorem lineMap_same (p : P1) : lineMap p p = const k k p :=
 
 @[simp]
 theorem lineMap_apply_zero (p₀ p₁ : P1) : lineMap p₀ p₁ (0 : k) = p₀ := by
-  simp [lineMap_apply]
+  letI : AddAction V1 P1 := inferInstance
+  -- porting note: `simp` needs lemmas to be expressions
+  simp [(lineMap_apply)]
 #align affine_map.line_map_apply_zero AffineMap.lineMap_apply_zero
 
 @[simp]
 theorem lineMap_apply_one (p₀ p₁ : P1) : lineMap p₀ p₁ (1 : k) = p₁ := by
-  simp [lineMap_apply]
+  -- porting note: `simp` needs lemmas to be expressions
+  simp [(lineMap_apply), (vsub_vadd)]
 #align affine_map.line_map_apply_one AffineMap.lineMap_apply_one
 
 @[simp]
@@ -583,7 +596,8 @@ variable {k}
 @[simp]
 theorem apply_lineMap (f : P1 →ᵃ[k] P2) (p₀ p₁ : P1) (c : k) :
     f (lineMap p₀ p₁ c) = lineMap (f p₀) (f p₁) c := by
-  simp [lineMap_apply]
+  -- porting note: `simp` needs lemmas to be expressions
+  simp [(lineMap_apply), (map_vadd), (linearMap_vsub)]
 #align affine_map.apply_line_map AffineMap.apply_lineMap
 
 @[simp]
