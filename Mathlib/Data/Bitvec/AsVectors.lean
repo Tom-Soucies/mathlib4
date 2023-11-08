@@ -93,30 +93,54 @@ theorem consRecursion_cons {motive nil cons} {x : Bool} {xs : Bitvec n} :
 
 /-- Turn a Bitvector into a vector of bools of the same length -/
 def asVector {n : Nat} : Bitvec n → Vector Bool n :=
-  fun xs => xs
+  fun xs =>
+    consRecursion
+      (Vector.nil)
+      (fun x _ xs => Vector.cons x xs)
+      xs
 
 /-- Turn a vector of bools into a Bitvector of the same length -/
 def ofVector {n : Nat} : Vector Bool n → Bitvec n :=
-  fun x => x
+  fun x =>
+    match n with
+    | 0 => nil
+    | Nat.succ _ => cons (Vector.head x) (ofVector <| Vector.tail x)
 
 /-- Distribution of vectorEquiv over cons -/
 theorem asVector_cons {x : Bool} {xs : Bitvec n} :
     asVector (cons x xs) = Vector.cons x (asVector xs) := by
-  simp only [asVector, cons]
+  simp only [asVector, ofVector, consRecursion_cons]
 
 theorem ofVector_cons {x : Bool} {xs : Vector Bool n} :
     ofVector (Vector.cons x xs) = cons x (ofVector xs) := by
-  simp only [ofVector, cons]
+  simp only [ofVector, asVector, consRecursion_cons]
+  have H0 : Vector.head (Vector.cons x xs) = x := rfl
+  have H1 : Vector.tail (Vector.cons x xs) = xs := rfl
+  rw [H0, H1]
 
 def vectorEquiv {n : Nat} : Bitvec n ≃ Vector Bool n where
   toFun := asVector
   invFun := ofVector
   left_inv := fun xs => by
-    simp only [asVector, ofVector]
+    induction xs using consRecursion
+    case nil => rfl
+    case _ _ _ ih =>
+      simp only [asVector] at ih
+      simp only [asVector, consRecursion_cons, ofVector_cons, ih]
   right_inv := fun x => by
-    simp only [asVector, ofVector]
+    induction n
+    case zero => simp only [ofVector, asVector, Vector.eq_nil]
+    case _ _ ih =>
+      simp [ofVector, asVector_cons, ofVector_cons, ih]
 
 variable {m : Nat}
+
+/-- Get the head and tail of a Bitvec (head being the least significant bit) -/
+def head : Bitvec (n+1) → Bool :=
+  fun xs => Vector.head xs.asVector
+
+def tail : Bitvec (n + 1) → Bitvec n :=
+  fun xs => Vector.tail xs.asVector
 
 /-!
   ## Constants
@@ -124,7 +148,20 @@ variable {m : Nat}
 
 theorem zero_asVector :
     (Bitvec.zero m).asVector = Vector.replicate m false := by
-  simp only [asVector]
+  induction m
+  case zero =>
+    apply vectorEquiv.symm.injective
+    simp
+  case succ m ih =>
+    have : asVector (Bitvec.zero (Nat.succ m)) = Vector.cons false (asVector (Bitvec.zero m)) := by
+      have : Bitvec.zero (Nat.succ m) = cons false (Bitvec.zero m) := by rfl
+      rw [this]
+      simp only [asVector_cons]
+    rw [this]
+    have : Vector.replicate (Nat.succ m) false = Vector.cons false (Vector.replicate m false) := by
+      simp only [Vector.replicate, Vector.cons, List.replicate]
+    rw [this]
+    simp only [ih]
 
 /-!
   ## Bitwise
@@ -132,25 +169,54 @@ theorem zero_asVector :
 
 theorem complement_asVector {x : Bitvec n} :
     (~~~x) = (ofVector <| Vector.map not x.asVector) := by
-  simp only [asVector, ofVector, Complement.complement]
-  rfl
+  induction x using consRecursion
+  case nil =>
+    simp only [ofVector, asVector, Vector.eq_nil]
+  case cons b x ih =>
+    simp only [ofVector_cons, asVector_cons, Vector.map_cons]
+    have : ~~~cons b x = cons (!b) (~~~x) := by
+      simp only [Complement.complement]
+      simp only [Bitvec.cons]
+      rfl
+    rw [this, ih]
 
 variable {x y : Bitvec n}
 
 theorem and_asVector :
     (x &&& y) = (ofVector <| Vector.map₂ and x.asVector y.asVector) := by
-  simp only [asVector, ofVector]
-  rfl
+  induction x using consRecursion
+  case nil =>
+    simp only [ofVector, asVector, Vector.eq_nil]
+  case cons b x ih =>
+    simp only [asVector_cons]
+    have : y = Bitvec.cons (head y) (tail y) := by
+      sorry
+    rw [this]
+    simp only [asVector_cons, Vector.map₂_cons]
+    have : cons b x &&& cons (head y) (tail y) = cons (b && head y) (x &&& tail y) := by
+      sorry
+    rw [this]
+    have : cons (b && head y) (x &&& tail y) = cons (b && head y) (ofVector <| Vector.map₂ and x.asVector y.asVector) := by
+      rw [ih]
+    sorry
 
 theorem or_asVector :
     (x ||| y) = (ofVector <| Vector.map₂ or x.asVector y.asVector) := by
-  simp only [asVector, ofVector]
-  rfl
+  induction x using consRecursion
+  case nil =>
+    simp only [ofVector, asVector, Vector.eq_nil]
+  case cons b x ih =>
+    simp only [consRecursion_cons, asVector_cons]
+    sorry
 
 theorem xor_asVector :
     (x ^^^ y) = (ofVector <| Vector.map₂ xor x.asVector y.asVector) := by
-  simp only [asVector, ofVector]
-  rfl
+  induction x using consRecursion
+  case nil =>
+    simp only [ofVector, asVector, Vector.eq_nil]
+  case cons b x ih =>
+    simp only [consRecursion_cons, asVector_cons]
+    sorry
 
 /-
   TODO: `shiftLeft`, `shiftRight`, `rotateLeft`, `rotateRight`
@@ -172,15 +238,29 @@ theorem add_asVector :
     x + y = (ofVector <| Prod.snd <|
       Vector.mapAccumr₂ (fun x y c => (_, _)) x.asVector y.asVector false
     ) := by
-  simp only [ofVector, asVector]
-  rfl
+  induction x using consRecursion
+  case nil =>
+    simp only [ofVector, asVector, Vector.eq_nil]
+    have : y = nil := by simp only [zero_length_eq_nil]
+    rw [this]
+    rfl
+  case cons b x ih =>
+    simp only [consRecursion_cons, asVector_cons]
+    sorry
 
 theorem sub_asVector :
     x - y = (ofVector <| Prod.snd <|
       Vector.mapAccumr₂ (fun x y c => (_, _)) x.asVector y.asVector false
     ) := by
-  simp only [ofVector, asVector]
-  rfl
+  induction x using consRecursion
+  case nil =>
+    simp only [ofVector, asVector, Vector.eq_nil]
+    have : y = nil := by simp only [zero_length_eq_nil]
+    rw [this]
+    rfl
+  case cons b x ih =>
+    simp only [consRecursion_cons, asVector_cons]
+    sorry
 
 /-
   TODO: `mul`, `div`, `mod`
