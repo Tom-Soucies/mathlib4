@@ -41,7 +41,7 @@ def cons (x : Bool) (xs : BitVec n) : BitVec (n+1) :=
 
 /-- Get the head and tail of a BitVec (head being the least significant bit) -/
 def head (xs : BitVec (n + 1)) : Bool :=
-  (BitVec.toNat xs &&& 1 <<< 1) != 0
+  Bool.ofNat (BitVec.toNat xs % 2)
 
 def tail (xs : BitVec (n + 1)) : BitVec n :=
   BitVec.ofNat n (BitVec.toNat xs >>> 1)
@@ -94,6 +94,44 @@ theorem consRecursion_cons {motive nil cons} {x : Bool} {xs : BitVec n} :
   `f (BitVec.cons x xs)`
 -/
 
+lemma neq_succ {n p : Nat} (h : n < 2 ^ p) :
+    2 * n + 1 < 2 ^ (p + 1) := by
+  have : 2 * (n + 1) <= 2 * 2 ^ p := Nat.mul_le_mul_left 2 (Nat.succ_le_of_lt h)
+  have : 2 * n + 2 <= 2 * 2 ^ p := Nat.mul_succ 2 n ▸ this
+  have : Nat.succ (2 * n + 1) <= 2 * 2 ^ p := by
+    simp [Nat.succ_eq_add_one, Nat.add_assoc]
+    exact this
+  have : 2 * n + 1 < 2 * 2 ^ p := Nat.lt_of_succ_le this
+  simp only [Nat.pow_succ, Nat.mul_comm (2 ^ p)]
+  exact this
+
+theorem head_cons {x : Bool} {xs : BitVec n} :
+    head (cons x xs) = x := by
+  simp only [cons]
+  simp only [head]
+  simp only [HShiftLeft.hShiftLeft, ShiftLeft.shiftLeft, Nat.shiftLeft]
+  match x with
+  | true =>
+    simp only [cond]
+    rw [BitVec.toNat_ofNat]
+    . simp [Nat.add_comm]
+    . have : BitVec.toNat xs < 2 ^ n := xs.toFin.prop
+      have : 2 * BitVec.toNat xs + 1 < 2 ^ (n + 1) := neq_succ this
+      exact this
+  | false =>
+    simp only [cond]
+    rw [BitVec.toNat_ofNat]
+    simp
+    rw [Nat.add_zero]
+    have : BitVec.toNat xs < 2 ^ n := xs.toFin.prop
+    have : 2 * BitVec.toNat xs < 2 * 2 ^ n := Nat.mul_lt_mul' (Nat.le_refl 2) this (Nat.zero_lt_succ 1)
+    simp only [Nat.pow_succ, Nat.mul_comm (2 ^ n)]
+    exact this
+
+theorem tail_cons {x : Bool} {xs : BitVec n} :
+    tail (cons x xs) = xs := by
+  sorry
+
 theorem cons_head_tail_eq {x : BitVec (n + 1)} :
     x = cons (head x) (tail x) := by
   simp [cons]
@@ -104,6 +142,7 @@ theorem cons_head_tail_eq {x : BitVec (n + 1)} :
     match head x with
     | true =>
       simp
+
       sorry
     | false =>
       simp
@@ -130,15 +169,6 @@ theorem head_tail_eq {xs ys : BitVec (n + 1)} :
       rw [←T, ←H]
       exact cons_head_tail_eq
     rw [this, ←cons_head_tail_eq]
-
-theorem head_cons {x : Bool} {xs : BitVec n} :
-    head (cons x xs) = x := by
-  simp only [cons, head, BitVec.toNat_ofNat, cond]
-  sorry
-
-theorem tail_cons {x : Bool} {xs : BitVec n} :
-    tail (cons x xs) = xs := by
-  sorry
 
 /-!
   ## Equivalence
