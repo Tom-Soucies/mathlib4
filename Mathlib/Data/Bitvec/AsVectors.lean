@@ -25,14 +25,6 @@ universe u v
 def nil : BitVec 0 :=
   BitVec.zero 0
 
-/-- Prepend a single bit to the front of a bitvector. The new bit is the most significant bit -/
-def cons (x : Bool) (xs : BitVec n) : BitVec (n+1) :=
-  BitVec.append xs (cond x 1 0)
-
-/-- Append a single bit to the end of a bitvector. The new bit is the least significant bit -/
-def concat (xs : BitVec n) (x : Bool) : BitVec (n+1) :=
-  xs.append (BitVec.fill 1 x)
-
 /-- There is only one `empty` bitvector, namely, `nil` -/
 theorem zero_length_eq_nil :
     ∀ (xs : BitVec 0), xs = nil := by
@@ -42,6 +34,17 @@ theorem zero_length_eq_nil :
   have : xs.toNat = nil.toNat := this
   simp only [nil, BitVec.zero, toNat_inj] at this
   simp only [this]
+
+/-- Prepend a single bit to the front of a bitvector. The new bit is the least significant bit -/
+def cons (x : Bool) (xs : BitVec n) : BitVec (n+1) :=
+  BitVec.ofNat (n + 1) (BitVec.toNat xs <<< 1 + cond x 1 0)
+
+/-- Get the head and tail of a BitVec (head being the least significant bit) -/
+def head (xs : BitVec (n + 1)) : Bool :=
+  (BitVec.toNat xs &&& 1 <<< 1) != 0
+
+def tail (xs : BitVec (n + 1)) : BitVec n :=
+  BitVec.ofNat n (BitVec.toNat xs >>> 1)
 
 /-!
   ## Induction principles
@@ -91,22 +94,23 @@ theorem consRecursion_cons {motive nil cons} {x : Bool} {xs : BitVec n} :
   `f (BitVec.cons x xs)`
 -/
 
-
-/-!
-  ## Equivalence
--/
-
-/-- Get the head and tail of a BitVec (head being the least significant bit) -/
-def head : BitVec n → Bool :=
-  fun xs => BitVec.getLsb xs 1
-
-def tail : BitVec (n + 1) → BitVec n :=
-  fun xs => BitVec.ofNat n xs.toNat.div2
-
 theorem cons_head_tail_eq {x : BitVec (n + 1)} :
     x = cons (head x) (tail x) := by
-  simp only [cons, head, tail]
-  sorry
+  simp [cons]
+  induction tail x using consRecursion
+  case nil =>
+    simp [nil]
+    simp [BitVec.zero]
+    match head x with
+    | true =>
+      simp
+      sorry
+    | false =>
+      simp
+      sorry
+  case cons b xs ih =>
+    simp [cons]
+    sorry
 
 theorem head_tail_eq {xs ys : BitVec (n + 1)} :
     xs = ys ↔ head xs = head ys ∧ tail xs = tail ys := by
@@ -129,11 +133,16 @@ theorem head_tail_eq {xs ys : BitVec (n + 1)} :
 
 theorem head_cons {x : Bool} {xs : BitVec n} :
     head (cons x xs) = x := by
+  simp only [cons, head, BitVec.toNat_ofNat, cond]
   sorry
 
 theorem tail_cons {x : Bool} {xs : BitVec n} :
     tail (cons x xs) = xs := by
   sorry
+
+/-!
+  ## Equivalence
+-/
 
 /-- Turn a bitvector into a vector of bools of the same length -/
 def asVector {n : Nat} : BitVec n → Vector Bool n :=
