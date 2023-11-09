@@ -46,6 +46,9 @@ def head (xs : BitVec (n + 1)) : Bool :=
 def tail (xs : BitVec (n + 1)) : BitVec n :=
   BitVec.ofNat n (Nat.div2 (BitVec.toNat xs))
 
+/- Todo : prove equivalence between this and getlsb (same thing for extractlsb) -/
+
+
 /-!
   ## Induction principles
 -/
@@ -145,7 +148,22 @@ theorem tail_cons {x : Bool} {xs : BitVec n} :
 
 theorem cons_head_tail_eq {x : BitVec (n + 1)} :
     x = cons (head x) (tail x) := by
-  sorry
+  simp only [cons, tail, Nat.div2_val]
+  have : (BitVec.toNat x) / 2 < 2 ^ n := by
+    have : BitVec.toNat x < 2 ^ (n + 1) := x.toFin.prop
+    have : BitVec.toNat x / 2 < 2 ^ (n + 1) / 2 := sorry
+    have H0 : 2 ^ (n + 1) / 2 = 2 ^ n := sorry
+    rw [H0] at this
+    exact this
+  rw [BitVec.toNat_ofNat this]
+  induction head x
+  case false =>
+    simp only [cond, Nat.add_zero]
+
+    sorry
+  case true =>
+    simp [cond]
+    sorry
 
 theorem head_tail_eq {xs ys : BitVec (n + 1)} :
     xs = ys ↔ head xs = head ys ∧ tail xs = tail ys := by
@@ -240,21 +258,21 @@ theorem zero_asVector :
   ## Bitwise
 -/
 
+theorem head_complement {x : BitVec (n + 1)} :
+    head (~~~x) = !head x := by
+  sorry
+theorem tail_complement {x : BitVec (n + 1)} :
+    tail (~~~x) = ~~~(tail x) := by
+  sorry
+
 theorem complement_cons {x : Bool} {xs : BitVec n} :
     ~~~cons x xs = cons (!x) (~~~xs) := by
-  induction xs using consRecursion
-  case nil =>
-    simp only [nil, BitVec.zero, BitVec.cons, Complement.complement]
-    sorry
-  case cons b xs ih =>
-    rw [head_tail_eq]
-    apply And.intro
-    case left =>
-      simp only [head_cons]
-      sorry
-    case right =>
-      simp only [tail_cons]
-      sorry
+  rw [head_tail_eq]
+  apply And.intro
+  case left =>
+    simp only [head_cons, head_complement]
+  case right =>
+    simp only [tail_cons, tail_complement]
 
 theorem complement_asVector {x : BitVec n} :
     (~~~x) = (ofVector <| Vector.map not x.asVector) := by
@@ -275,7 +293,13 @@ theorem and_asVector :
     rfl
   case cons b x ih =>
     simp only [asVector_cons]
-    sorry
+    rw [head_tail_eq]
+    apply And.intro
+    case left =>
+
+      sorry
+    case right =>
+      sorry
 
 theorem or_asVector :
     (x ||| y) = (ofVector <| Vector.map₂ or x.asVector y.asVector) := by
@@ -301,15 +325,6 @@ theorem xor_asVector :
     simp only [consRecursion_cons, asVector_cons]
     sorry
 
-theorem shiftLeft_asVector :
-    (x <<< m) = (ofVector <| Vector.cons false x.asVector) := by
-  sorry
-
-theorem ushiftRight_asVector :
-    (x >>> m) = (ofVector <| Vector.tail x.asVector) := by
-  sorry
-
-
 /-
   TODO: `shiftLeft`, `shiftRight`, `rotateLeft`, `rotateRight`
 -/
@@ -318,9 +333,6 @@ theorem ushiftRight_asVector :
   ## Comparisons
 -/
 
-theorem lt_asVectors :
-    x < y = (asVector x < asVector y) := by
-  sorry
 /-
   TODO: `lt`, `le`, `slt`, `sle`, `sgt`, `sge`
 -/
