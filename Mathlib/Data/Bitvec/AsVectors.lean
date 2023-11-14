@@ -47,6 +47,17 @@ def tail (xs : BitVec (n + 1)) : BitVec n :=
   BitVec.ofNat n (Nat.div2 (BitVec.toNat xs))
 
 /- Todo : prove equivalence between this and getlsb (same thing for extractlsb) -/
+theorem head_as_getlsb {n : Nat} (xs : BitVec (n + 1)) :
+    head xs = BitVec.getLsb xs 0 := by
+  sorry
+
+theorem tail_as_extractlsb {n : Nat} (xs : BitVec (n + 1)) :
+    tail xs = BitVec.extractLsb' 1 n xs := by
+  sorry
+
+theorem cons_as_append {x : Bool} {xs : BitVec n} :
+    cons x xs = xs.append (BitVec.ofNat 1 (cond x 1 0)) := by
+  sorry
 
 
 /-!
@@ -159,7 +170,6 @@ theorem cons_head_tail_eq {x : BitVec (n + 1)} :
   induction head x
   case false =>
     simp only [cond, Nat.add_zero]
-
     sorry
   case true =>
     simp [cond]
