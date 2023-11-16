@@ -122,14 +122,14 @@ lemma neq_succ {n p : Nat} (h : n < 2 ^ p) :
 theorem head_cons {x : Bool} {xs : BitVec n} :
     head (cons x xs) = x := by
   simp only [cons, head]
-  match x with
-  | true =>
+  induction x
+  case true =>
     simp only [cond]
     rw [BitVec.toNat_ofNat]
     . simp [Nat.add_comm]
     . have : 2 * BitVec.toNat xs + 1 < 2 ^ (n + 1) := neq_succ xs.toFin.prop
       exact this
-  | false =>
+  case false =>
     simp only [cond]
     rw [BitVec.toNat_ofNat]
     simp
@@ -141,14 +141,14 @@ theorem head_cons {x : Bool} {xs : BitVec n} :
 theorem tail_cons {x : Bool} {xs : BitVec n} :
     tail (cons x xs) = xs := by
   simp only [cons, tail]
-  match x with
-  | true =>
+  induction x
+  case true =>
     simp only [cond]
     rw [BitVec.toNat_ofNat]
     . simp [Nat.div2_val, Nat.mul_comm]
     . have : 2 * BitVec.toNat xs + 1 < 2 ^ (n + 1) := neq_succ xs.toFin.prop
       exact this
-  | false =>
+  case false =>
     simp only [cond]
     rw [BitVec.toNat_ofNat]
     simp
@@ -157,16 +157,21 @@ theorem tail_cons {x : Bool} {xs : BitVec n} :
       simp only [Nat.pow_succ, Nat.mul_comm (2 ^ n), Nat.add_zero]
       exact this
 
-theorem cons_head_tail_eq {x : BitVec (n + 1)} :
+theorem cons_head_tail_eq (x : BitVec (n + 1)) :
     x = cons (head x) (tail x) := by
   simp only [cons, tail, Nat.div2_val]
   have : (BitVec.toNat x) / 2 < 2 ^ n := by
     have : BitVec.toNat x < 2 ^ (n + 1) := x.toFin.prop
-    have : BitVec.toNat x / 2 < 2 ^ (n + 1) / 2 := sorry
-    have H0 : 2 ^ (n + 1) / 2 = 2 ^ n := sorry
+    have : BitVec.toNat x / 2 < 2 ^ (n + 1) / 2 := by
+
+      sorry
+    have H0 : 2 ^ (n + 1) / 2 = 2 ^ n := by
+      rw [Nat.pow_succ]
+      simp
     rw [H0] at this
     exact this
   rw [BitVec.toNat_ofNat this]
+  -- have : 2 * (BitVec.toNat x / 2) = cons false x
   induction head x
   case false =>
     simp only [cond, Nat.add_zero]
@@ -180,18 +185,14 @@ theorem head_tail_eq {xs ys : BitVec (n + 1)} :
   apply Iff.intro
   case mp =>
     intro h
-    apply And.intro
-    case left =>
-      rw [←h]
-    case right =>
-      rw [←h]
+    simp only [h]
   case mpr =>
     intro h
     have H : head xs = head ys := h.left
     have T : tail xs = tail ys := h.right
     have : xs = cons (head ys) (tail ys) := by
       rw [←T, ←H]
-      exact cons_head_tail_eq
+      exact cons_head_tail_eq xs
     rw [this, ←cons_head_tail_eq]
 
 /-!
@@ -271,6 +272,7 @@ theorem zero_asVector :
 theorem head_complement {x : BitVec (n + 1)} :
     head (~~~x) = !head x := by
   sorry
+
 theorem tail_complement {x : BitVec (n + 1)} :
     tail (~~~x) = ~~~(tail x) := by
   sorry
@@ -295,45 +297,113 @@ theorem complement_asVector {x : BitVec n} :
 
 variable {x y : BitVec n}
 
+/- And_AsVector theorem -/
+theorem head_and {x y : BitVec (n + 1)} :
+    head (x &&& y) = (head x && head y) := by
+  sorry
+
+theorem tail_and {x y : BitVec (n + 1)} :
+    tail (x &&& y) = tail x &&& tail y := by
+  sorry
+
+theorem and_cons {x y : Bool} {xs ys : BitVec n} :
+    (cons x xs) &&& (cons y ys) = cons (x && y) (xs &&& ys) := by
+  rw [head_tail_eq]
+  apply And.intro
+  case left =>
+    simp only [head_cons, head_and]
+  case right =>
+    simp only [tail_cons, tail_and]
+
 theorem and_asVector :
     (x &&& y) = (ofVector <| Vector.map₂ and x.asVector y.asVector) := by
   induction x using consRecursion
   case nil =>
-    simp only [ofVector, asVector, Vector.eq_nil]
-    rfl
+    simp only [zero_length_eq_nil]
   case cons b x ih =>
     simp only [asVector_cons]
-    rw [head_tail_eq]
-    apply And.intro
-    case left =>
+    rw [cons_head_tail_eq y]
+    simp only [and_cons, head_cons]
+    simp only [asVector_cons]
+    have : Vector.map₂ and (Vector.cons b (asVector x)) (Vector.cons (head y) (asVector (tail y))) =
+      Vector.cons (b && head y) (Vector.map₂ and (asVector x) (asVector (tail y))) := by
+      rfl
+    rw [this]
+    simp only [ofVector_cons, head_cons]
+    rw [head_tail_eq, ih]
+    simp
 
-      sorry
-    case right =>
-      sorry
+/- Or_AsVector theorem -/
+theorem head_or {x y : BitVec (n + 1)} :
+    head (x ||| y) = (head x || head y) := by
+  sorry
+
+theorem tail_or {x y : BitVec (n + 1)} :
+    tail (x ||| y) = tail x ||| tail y := by
+  sorry
+
+theorem or_cons {x y : Bool} {xs ys : BitVec n} :
+    (cons x xs) ||| (cons y ys) = cons (x || y) (xs ||| ys) := by
+  rw [head_tail_eq]
+  apply And.intro
+  case left =>
+    simp only [head_cons, head_or]
+  case right =>
+    simp only [tail_cons, tail_or]
 
 theorem or_asVector :
     (x ||| y) = (ofVector <| Vector.map₂ or x.asVector y.asVector) := by
   induction x using consRecursion
   case nil =>
-    simp only [ofVector, asVector, Vector.eq_nil]
-    have : y = nil := by simp only [zero_length_eq_nil]
-    rw [this]
-    rfl
+    simp only [zero_length_eq_nil]
   case cons b x ih =>
-    simp only [consRecursion_cons, asVector_cons]
-    sorry
+    simp only [asVector_cons]
+    rw [cons_head_tail_eq y]
+    simp only [or_cons, head_cons]
+    simp only [asVector_cons]
+    have : Vector.map₂ or (Vector.cons b (asVector x)) (Vector.cons (head y) (asVector (tail y))) =
+      Vector.cons (b || head y) (Vector.map₂ or (asVector x) (asVector (tail y))) := by
+      rfl
+    rw [this]
+    simp only [ofVector_cons, head_cons]
+    rw [head_tail_eq, ih]
+    simp
+
+/- Xor_AsVector theorem -/
+theorem head_xor {x y : BitVec (n + 1)} :
+    head (x ^^^ y) = (xor (head x) (head y)) := by
+  sorry
+
+theorem tail_xor {x y : BitVec (n + 1)} :
+    tail (x ^^^ y) = tail x ^^^ tail y := by
+  sorry
+
+theorem xor_cons {x y : Bool} {xs ys : BitVec n} :
+    (cons x xs) ^^^ (cons y ys) = cons (xor x y) (xs ^^^ ys) := by
+  rw [head_tail_eq]
+  apply And.intro
+  case left =>
+    simp only [head_cons, head_xor]
+  case right =>
+    simp only [tail_cons, tail_xor]
 
 theorem xor_asVector :
     (x ^^^ y) = (ofVector <| Vector.map₂ xor x.asVector y.asVector) := by
   induction x using consRecursion
   case nil =>
-    simp only [ofVector, asVector, Vector.eq_nil]
-    have : y = nil := by simp only [zero_length_eq_nil]
-    rw [this]
-    rfl
+    simp only [zero_length_eq_nil]
   case cons b x ih =>
-    simp only [consRecursion_cons, asVector_cons]
-    sorry
+    simp only [asVector_cons]
+    rw [cons_head_tail_eq y]
+    simp only [xor_cons, head_cons]
+    simp only [asVector_cons]
+    have : Vector.map₂ xor (Vector.cons b (asVector x)) (Vector.cons (head y) (asVector (tail y))) =
+      Vector.cons (xor b (head y)) (Vector.map₂ xor (asVector x) (asVector (tail y))) := by
+      rfl
+    rw [this]
+    simp only [ofVector_cons, head_cons]
+    rw [head_tail_eq, ih]
+    simp
 
 /-
   TODO: `shiftLeft`, `shiftRight`, `rotateLeft`, `rotateRight`
