@@ -221,9 +221,9 @@ theorem tail_cons {x : Bool} {xs : BitVec n} :
 
 theorem cons_head_tail_eq (x : BitVec (n + 1)) :
     x = cons (head x) (tail x) := by
-    rw [<-asVector_eq]
-    simp only [asVector_cons]
-    apply vectorEquiv.right_inv
+  rw [<-asVector_eq]
+  simp only [asVector_cons]
+  apply vectorEquiv.right_inv
 
 theorem head_tail_eq {xs ys : BitVec (n + 1)} :
     xs = ys ↔ head xs = head ys ∧ tail xs = tail ys := by
@@ -295,22 +295,11 @@ theorem complement_asVector {x : BitVec n} :
 variable {x y : BitVec n}
 
 /- And_AsVector theorem -/
-theorem head_and {x y : BitVec (n + 1)} :
-    head (x &&& y) = (head x && head y) := by
-  sorry
-
-theorem tail_and {x y : BitVec (n + 1)} :
-    tail (x &&& y) = tail x &&& tail y := by
-  sorry
-
 theorem and_cons {x y : Bool} {xs ys : BitVec n} :
     (cons x xs) &&& (cons y ys) = cons (x && y) (xs &&& ys) := by
-  rw [head_tail_eq]
-  apply And.intro
-  case left =>
-    simp only [head_cons, head_and]
-  case right =>
-    simp only [tail_cons, tail_and]
+  rw [<-asVector_eq]
+  simp only [asVector_cons]
+  apply vectorEquiv.right_inv
 
 theorem and_asVector :
     (x &&& y) = (ofVector <| Vector.map₂ and x.asVector y.asVector) := by
@@ -331,22 +320,11 @@ theorem and_asVector :
     simp
 
 /- Or_AsVector theorem -/
-theorem head_or {x y : BitVec (n + 1)} :
-    head (x ||| y) = (head x || head y) := by
-  sorry
-
-theorem tail_or {x y : BitVec (n + 1)} :
-    tail (x ||| y) = tail x ||| tail y := by
-  sorry
-
 theorem or_cons {x y : Bool} {xs ys : BitVec n} :
     (cons x xs) ||| (cons y ys) = cons (x || y) (xs ||| ys) := by
-  rw [head_tail_eq]
-  apply And.intro
-  case left =>
-    simp only [head_cons, head_or]
-  case right =>
-    simp only [tail_cons, tail_or]
+  rw [<-asVector_eq]
+  simp only [asVector_cons]
+  apply vectorEquiv.right_inv
 
 theorem or_asVector :
     (x ||| y) = (ofVector <| Vector.map₂ or x.asVector y.asVector) := by
@@ -367,22 +345,11 @@ theorem or_asVector :
     simp
 
 /- Xor_AsVector theorem -/
-theorem head_xor {x y : BitVec (n + 1)} :
-    head (x ^^^ y) = (xor (head x) (head y)) := by
-  sorry
-
-theorem tail_xor {x y : BitVec (n + 1)} :
-    tail (x ^^^ y) = tail x ^^^ tail y := by
-  sorry
-
 theorem xor_cons {x y : Bool} {xs ys : BitVec n} :
     (cons x xs) ^^^ (cons y ys) = cons (xor x y) (xs ^^^ ys) := by
-  rw [head_tail_eq]
-  apply And.intro
-  case left =>
-    simp only [head_cons, head_xor]
-  case right =>
-    simp only [tail_cons, tail_xor]
+  rw [<-asVector_eq]
+  simp only [asVector_cons]
+  apply vectorEquiv.right_inv
 
 theorem xor_asVector :
     (x ^^^ y) = (ofVector <| Vector.map₂ xor x.asVector y.asVector) := by
