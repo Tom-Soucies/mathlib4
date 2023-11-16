@@ -56,7 +56,7 @@ theorem tail_as_extractlsb {n : Nat} (xs : BitVec (n + 1)) :
   sorry
 
 theorem cons_as_append {x : Bool} {xs : BitVec n} :
-    cons x xs = xs.append (BitVec.ofNat 1 (cond x 1 0)) := by
+    cons x xs = BitVec.append xs (cond x (BitVec.zero 1) (BitVec.one 1)) := by
   sorry
 
 
@@ -107,6 +107,68 @@ theorem consRecursion_cons {motive nil cons} {x : Bool} {xs : BitVec n} :
   `f BitVec.nil`, while `h_cons` is a function that maps `x`, `xs` and `f xs` to the return value of
   `f (BitVec.cons x xs)`
 -/
+
+/-!
+  ## Equivalence
+-/
+
+/-- Turn a bitvector into a vector of bools of the same length -/
+def asVector {n : Nat} : BitVec n → Vector Bool n :=
+  fun xs =>
+    consRecursion
+      (Vector.nil)
+      (fun x _ xs => Vector.cons x xs)
+      xs
+
+/-- Turn a vector of bools into a bitvector of the same length -/
+def ofVector {n : Nat} : Vector Bool n → BitVec n :=
+  fun x =>
+    match n with
+    | 0 => nil
+    | Nat.succ _ => cons (Vector.head x) (ofVector <| Vector.tail x)
+
+/-- Distribution of vectorEquiv over cons -/
+theorem asVector_cons {x : Bool} {xs : BitVec n} :
+    asVector (cons x xs) = Vector.cons x (asVector xs) := by
+  simp only [asVector, ofVector, consRecursion_cons]
+
+theorem ofVector_cons {x : Bool} {xs : Vector Bool n} :
+    ofVector (Vector.cons x xs) = cons x (ofVector xs) := by
+  simp only [ofVector, asVector, consRecursion_cons]
+  have H0 : Vector.head (Vector.cons x xs) = x := rfl
+  have H1 : Vector.tail (Vector.cons x xs) = xs := rfl
+  rw [H0, H1]
+
+def vectorEquiv {n : Nat} : BitVec n ≃ Vector Bool n where
+  toFun := asVector
+  invFun := ofVector
+  left_inv := fun xs => by
+    induction xs using consRecursion
+    case nil => rfl
+    case _ _ _ ih =>
+      simp only [asVector] at ih
+      simp only [asVector, consRecursion_cons, ofVector_cons, ih]
+  right_inv := fun x => by
+    induction n
+    case zero => simp only [ofVector, asVector, Vector.eq_nil]
+    case _ _ ih =>
+      simp [ofVector, asVector_cons, ofVector_cons, ih]
+
+def asVector_eq {xs ys : BitVec n} :
+    asVector xs = asVector ys ↔ xs = ys := by
+  apply Iff.intro
+  case mp =>
+    intro h
+    sorry
+  case mpr =>
+    intro h
+    rw [h]
+
+/-!
+  ## Properties over `cons`
+-/
+
+variable {m : Nat}
 
 lemma neq_succ {n p : Nat} (h : n < 2 ^ p) :
     2 * n + 1 < 2 ^ (p + 1) := by
@@ -159,26 +221,9 @@ theorem tail_cons {x : Bool} {xs : BitVec n} :
 
 theorem cons_head_tail_eq (x : BitVec (n + 1)) :
     x = cons (head x) (tail x) := by
-  simp only [cons, tail, Nat.div2_val]
-  have : (BitVec.toNat x) / 2 < 2 ^ n := by
-    have : BitVec.toNat x < 2 ^ (n + 1) := x.toFin.prop
-    have : BitVec.toNat x / 2 < 2 ^ (n + 1) / 2 := by
-
-      sorry
-    have H0 : 2 ^ (n + 1) / 2 = 2 ^ n := by
-      rw [Nat.pow_succ]
-      simp
-    rw [H0] at this
-    exact this
-  rw [BitVec.toNat_ofNat this]
-  -- have : 2 * (BitVec.toNat x / 2) = cons false x
-  induction head x
-  case false =>
-    simp only [cond, Nat.add_zero]
-    sorry
-  case true =>
-    simp [cond]
-    sorry
+    rw [<-asVector_eq]
+    simp only [asVector_cons]
+    apply vectorEquiv.right_inv
 
 theorem head_tail_eq {xs ys : BitVec (n + 1)} :
     xs = ys ↔ head xs = head ys ∧ tail xs = tail ys := by
@@ -194,54 +239,6 @@ theorem head_tail_eq {xs ys : BitVec (n + 1)} :
       rw [←T, ←H]
       exact cons_head_tail_eq xs
     rw [this, ←cons_head_tail_eq]
-
-/-!
-  ## Equivalence
--/
-
-/-- Turn a bitvector into a vector of bools of the same length -/
-def asVector {n : Nat} : BitVec n → Vector Bool n :=
-  fun xs =>
-    consRecursion
-      (Vector.nil)
-      (fun x _ xs => Vector.cons x xs)
-      xs
-
-/-- Turn a vector of bools into a bitvector of the same length -/
-def ofVector {n : Nat} : Vector Bool n → BitVec n :=
-  fun x =>
-    match n with
-    | 0 => nil
-    | Nat.succ _ => cons (Vector.head x) (ofVector <| Vector.tail x)
-
-/-- Distribution of vectorEquiv over cons -/
-theorem asVector_cons {x : Bool} {xs : BitVec n} :
-    asVector (cons x xs) = Vector.cons x (asVector xs) := by
-  simp only [asVector, ofVector, consRecursion_cons]
-
-theorem ofVector_cons {x : Bool} {xs : Vector Bool n} :
-    ofVector (Vector.cons x xs) = cons x (ofVector xs) := by
-  simp only [ofVector, asVector, consRecursion_cons]
-  have H0 : Vector.head (Vector.cons x xs) = x := rfl
-  have H1 : Vector.tail (Vector.cons x xs) = xs := rfl
-  rw [H0, H1]
-
-def vectorEquiv {n : Nat} : BitVec n ≃ Vector Bool n where
-  toFun := asVector
-  invFun := ofVector
-  left_inv := fun xs => by
-    induction xs using consRecursion
-    case nil => rfl
-    case _ _ _ ih =>
-      simp only [asVector] at ih
-      simp only [asVector, consRecursion_cons, ofVector_cons, ih]
-  right_inv := fun x => by
-    induction n
-    case zero => simp only [ofVector, asVector, Vector.eq_nil]
-    case _ _ ih =>
-      simp [ofVector, asVector_cons, ofVector_cons, ih]
-
-variable {m : Nat}
 
 /-!
   ## Constants
