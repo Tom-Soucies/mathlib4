@@ -46,18 +46,18 @@ def head (xs : BitVec (n + 1)) : Bool :=
 def tail (xs : BitVec (n + 1)) : BitVec n :=
   BitVec.ofNat n (Nat.div2 (BitVec.toNat xs))
 
-/- Todo : prove equivalence between this and getlsb (same thing for extractlsb) -/
-theorem head_as_getlsb {n : Nat} (xs : BitVec (n + 1)) :
-    head xs = BitVec.getLsb xs 0 := by
-  sorry
+-- /- Todo : prove equivalence between this and getlsb (same thing for extractlsb) -/
+-- theorem head_as_getlsb {n : Nat} (xs : BitVec (n + 1)) :
+--     head xs = BitVec.getLsb xs 0 := by
+--   sorry
 
-theorem tail_as_extractlsb {n : Nat} (xs : BitVec (n + 1)) :
-    tail xs = BitVec.extractLsb' 1 n xs := by
-  sorry
+-- theorem tail_as_extractlsb {n : Nat} (xs : BitVec (n + 1)) :
+--     tail xs = BitVec.extractLsb' 1 n xs := by
+--   sorry
 
-theorem cons_as_append {x : Bool} {xs : BitVec n} :
-    cons x xs = BitVec.append xs (cond x (BitVec.zero 1) (BitVec.one 1)) := by
-  sorry
+-- theorem cons_as_append {x : Bool} {xs : BitVec n} :
+--     cons x xs = BitVec.append xs (cond x (BitVec.zero 1) (BitVec.one 1)) := by
+--   sorry
 
 
 /-!
@@ -156,13 +156,7 @@ def vectorEquiv {n : Nat} : BitVec n ≃ Vector Bool n where
 
 def asVector_eq {xs ys : BitVec n} :
     asVector xs = asVector ys ↔ xs = ys := by
-  apply Iff.intro
-  case mp =>
-    intro h
-    sorry
-  case mpr =>
-    intro h
-    rw [h]
+  apply Iff.intro (fun h => vectorEquiv.injective h) (congr_arg asVector)
 
 /-!
   ## Properties over `cons`
@@ -266,22 +260,12 @@ theorem zero_asVector :
   ## Bitwise
 -/
 
-theorem head_complement {x : BitVec (n + 1)} :
-    head (~~~x) = !head x := by
-  sorry
-
-theorem tail_complement {x : BitVec (n + 1)} :
-    tail (~~~x) = ~~~(tail x) := by
-  sorry
-
+/- Complement_AsVector theorem -/
 theorem complement_cons {x : Bool} {xs : BitVec n} :
     ~~~cons x xs = cons (!x) (~~~xs) := by
-  rw [head_tail_eq]
-  apply And.intro
-  case left =>
-    simp only [head_cons, head_complement]
-  case right =>
-    simp only [tail_cons, tail_complement]
+  rw [<-asVector_eq]
+  simp only [asVector_cons]
+  apply vectorEquiv.right_inv
 
 theorem complement_asVector {x : BitVec n} :
     (~~~x) = (ofVector <| Vector.map not x.asVector) := by
