@@ -2,8 +2,6 @@ import Mathlib.Data.Bitvec.Defs
 import Mathlib.Data.Bitvec.Lemmas
 import Mathlib.Data.Vector
 
-#check Vector.mapAccumr
-
 /-!
   A `Bitvec n` is morally a sequence of `n` bits.
   This file establishes a way to shift to this perspective by proving the equivalence between
@@ -68,7 +66,7 @@ def tail (xs : BitVec (n + 1)) : BitVec n :=
 @[elab_as_elim]
 def consRecursion {motive : {n : Nat} → BitVec n → Sort u}
     (nil : motive nil)
-    (cons : {n : Nat} → (x : Bool) → (xs : BitVec n) → motive xs → motive (cons x xs))
+    (ind : {n : Nat} → (x : Bool) → (xs : BitVec n) → motive xs → motive (cons x xs))
     {n : Nat} (xs : BitVec n) : motive xs :=
   /-
     This one might be a bit hard to prove.
@@ -79,14 +77,14 @@ def consRecursion {motive : {n : Nat} → BitVec n → Sort u}
   sorry
 
 @[simp]
-theorem consRecursion_nil {motive nil cons} :
-    consRecursion (motive:=motive) nil cons .nil = nil := by
+theorem consRecursion_nil {motive nil ind} :
+    consRecursion (motive:=motive) nil ind .nil = nil := by
   sorry
 
 @[simp]
-theorem consRecursion_cons {motive nil cons} {x : Bool} {xs : BitVec n} :
-    consRecursion (motive:=motive) nil cons (.cons x xs)
-    = cons x xs (consRecursion nil cons xs) := by
+theorem consRecursion_cons {motive nil ind} {x : Bool} {xs : BitVec n} :
+    consRecursion (motive:=motive) nil ind (.cons x xs)
+    = ind x xs (consRecursion nil ind xs) := by
   sorry
 
 /-
@@ -272,8 +270,28 @@ theorem complement_asVector {x : BitVec n} :
   induction x using consRecursion
   case nil =>
     simp only [ofVector, asVector, Vector.eq_nil]
-  case cons b x ih =>
+  case ind b x ih =>
     simp only [ofVector_cons, asVector_cons, Vector.map_cons, complement_cons]
+    rw [ih]
+
+/-
+  TODO: `shiftLeft`, `shiftRight`, `rotateLeft`, `rotateRight`
+-/
+
+/- ShiftLeft_AsVector theorem (one iteration) -/
+theorem shiftLeft_cons {x : Bool} {xs : BitVec n} :
+    (cons x xs) <<< 1 = cons false (xs <<< 1) := by
+  rw [<-asVector_eq]
+  simp only [asVector_cons]
+  apply vectorEquiv.right_inv
+
+theorem shiftLeft_asVector {x : BitVec n} :
+    (x <<< 1) = (ofVector <| Vector.map (fun _ => false) x.asVector) := by
+  induction x using consRecursion
+  case nil =>
+    simp only [zero_length_eq_nil]
+  case ind b x ih =>
+    simp only [ofVector_cons, asVector_cons, Vector.map_cons, shiftLeft_cons]
     rw [ih]
 
 variable {x y : BitVec n}
@@ -290,16 +308,15 @@ theorem and_asVector :
   induction x using consRecursion
   case nil =>
     simp only [zero_length_eq_nil]
-  case cons b x ih =>
+  case ind b x ih =>
     simp only [asVector_cons]
     rw [cons_head_tail_eq y]
-    simp only [and_cons, head_cons]
-    simp only [asVector_cons]
+    simp only [and_cons, asVector_cons]
     have : Vector.map₂ and (Vector.cons b (asVector x)) (Vector.cons (head y) (asVector (tail y))) =
       Vector.cons (b && head y) (Vector.map₂ and (asVector x) (asVector (tail y))) := by
       rfl
     rw [this]
-    simp only [ofVector_cons, head_cons]
+    simp only [ofVector_cons]
     rw [head_tail_eq, ih]
     simp
 
@@ -315,16 +332,15 @@ theorem or_asVector :
   induction x using consRecursion
   case nil =>
     simp only [zero_length_eq_nil]
-  case cons b x ih =>
+  case ind b x ih =>
     simp only [asVector_cons]
     rw [cons_head_tail_eq y]
-    simp only [or_cons, head_cons]
-    simp only [asVector_cons]
+    simp only [or_cons, asVector_cons]
     have : Vector.map₂ or (Vector.cons b (asVector x)) (Vector.cons (head y) (asVector (tail y))) =
       Vector.cons (b || head y) (Vector.map₂ or (asVector x) (asVector (tail y))) := by
       rfl
     rw [this]
-    simp only [ofVector_cons, head_cons]
+    simp only [ofVector_cons]
     rw [head_tail_eq, ih]
     simp
 
@@ -340,22 +356,17 @@ theorem xor_asVector :
   induction x using consRecursion
   case nil =>
     simp only [zero_length_eq_nil]
-  case cons b x ih =>
+  case ind b x ih =>
     simp only [asVector_cons]
     rw [cons_head_tail_eq y]
-    simp only [xor_cons, head_cons]
-    simp only [asVector_cons]
+    simp only [xor_cons, asVector_cons]
     have : Vector.map₂ xor (Vector.cons b (asVector x)) (Vector.cons (head y) (asVector (tail y))) =
       Vector.cons (xor b (head y)) (Vector.map₂ xor (asVector x) (asVector (tail y))) := by
       rfl
     rw [this]
-    simp only [ofVector_cons, head_cons]
+    simp only [ofVector_cons]
     rw [head_tail_eq, ih]
     simp
-
-/-
-  TODO: `shiftLeft`, `shiftRight`, `rotateLeft`, `rotateRight`
--/
 
 /-!
   ## Comparisons
@@ -369,9 +380,19 @@ theorem xor_asVector :
   ## Arithmetic
 -/
 
+/- Add_AsVector theorem -/
+def sum_bool (x y c : Bool) : Bool × Bool :=
+  (or (and x y) (or (and x c) (and c y)), xor (xor x y) c)
+
+theorem add_cons {x y : Bool} {xs ys : BitVec n} :
+    (cons x xs) + (cons y ys) = cons (Prod.snd (sum_bool x y false)) (adc xs ys (Prod.fst (sum_bool x y false))) := by
+  rw [<-asVector_eq]
+  simp only [asVector_cons]
+  apply vectorEquiv.right_inv
+
 theorem add_asVector :
     x + y = (ofVector <| Prod.snd <|
-      Vector.mapAccumr₂ (fun x y c => (_, _)) x.asVector y.asVector false
+      Vector.mapAccumr₂ (fun x y c => (sum_bool x y c)) (asVector x) (asVector y) false
     ) := by
   induction x using consRecursion
   case nil =>
@@ -379,13 +400,142 @@ theorem add_asVector :
     have : y = nil := by simp only [zero_length_eq_nil]
     rw [this]
     rfl
-  case cons b x ih =>
-    simp only [consRecursion_cons, asVector_cons]
-    sorry
+  case ind b x ih =>
+    -- simp only [asVector_cons]
+    -- rw [cons_head_tail_eq y]
+    -- simp only [add_cons, asVector_cons]
+    -- match b, (head y) with
+    -- | true, true =>
+    --   rw [sum_bool]
+    --   simp
+    --   have : (Vector.mapAccumr₂ (fun x y c ↦ sum_bool x y c) (Vector.cons true (asVector x)) (Vector.cons true (asVector (tail y))) false).2 =
+    --     Vector.cons (sum_bool true true false).2 (Vector.mapAccumr₂ (fun x y c ↦ sum_bool x y c) (asVector x) (asVector (tail y)) (Prod.fst <| sum_bool true true false)).2 := by
+    --     sorry
+    --   rw [this, sum_bool]
+    --   simp [ofVector_cons]
+    --   rw [head_tail_eq]
+    --   apply And.intro
+    --   case left =>
+    --     rw [head_cons, head_cons]
+    --   case right =>
+    --     rw [tail_cons, tail_cons]
+    --     simp [sum_bool]
+    --     have : adc x (tail y) true = x + (tail y) + 1 := by
+    --       simp [adc]
+    --       rw [<-BitVec.add_eq]
+    --       simp [BitVec.add]
+    --       rfl
+    --     rw [this]
+    --     rw [ih]
+    --     sorry
+    -- | false, _ =>
+    --   rw [sum_bool]
+    --   simp
+    --   have {z : Bool} : (Vector.mapAccumr₂ (fun x y c ↦ sum_bool x y c) (Vector.cons false (asVector x)) (Vector.cons z (asVector (tail y))) false).2 =
+    --     Vector.cons (sum_bool false z false).2 (Vector.mapAccumr₂ (fun x y c ↦ sum_bool x y c) (asVector x) (asVector (tail y)) (Prod.fst <| sum_bool false z false)).2 := by
+    --     sorry
+    --   rw [this, sum_bool]
+    --   simp [ofVector_cons]
+    --   rw [head_tail_eq]
+    --   apply And.intro
+    --   case left =>
+    --     rw [head_cons, head_cons]
+    --   case right =>
+    --     rw [tail_cons, tail_cons]
+    --     simp [sum_bool]
+    --     have : adc x (tail y) false = x + (tail y) := by
+    --       simp [adc]
+    --       rw [<-BitVec.add_eq]
+    --       simp [BitVec.add]
+    --     rw [this]
+    --     rw [ih]
+    --     simp [sum_bool]
+    -- | _, false =>
+    --   rw [sum_bool]
+    --   simp
+    --   have {z : Bool} : (Vector.mapAccumr₂ (fun x y c ↦ sum_bool x y c) (Vector.cons z (asVector x)) (Vector.cons false (asVector (tail y))) false).2 =
+    --     Vector.cons (sum_bool z false false).2 (Vector.mapAccumr₂ (fun x y c ↦ sum_bool x y c) (asVector x) (asVector (tail y)) (Prod.fst <| sum_bool z false false)).2 := by
+    --     sorry
+    --   rw [this, sum_bool]
+    --   simp [ofVector_cons]
+    --   rw [head_tail_eq]
+    --   apply And.intro
+    --   case left =>
+    --     rw [head_cons, head_cons]
+    --   case right =>
+    --     rw [tail_cons, tail_cons]
+    --     simp [sum_bool]
+    --     have : adc x (tail y) false = x + (tail y) := by
+    --       simp [adc]
+    --       rw [<-BitVec.add_eq]
+    --       simp [BitVec.add]
+    --     rw [this]
+    --     rw [ih]
+    --     simp [sum_bool]
+
+    simp only [asVector_cons]
+    rw [cons_head_tail_eq y]
+    simp only [add_cons, asVector_cons]
+    have : (Vector.mapAccumr₂ (fun x y c => sum_bool x y c) (Vector.cons b (asVector x)) (Vector.cons (head y) (asVector (tail y))) false).2 =
+      Vector.cons (sum_bool b (head y) false).2 (Vector.mapAccumr₂ (fun x y c => sum_bool x y c) (asVector x) (asVector (tail y)) (Prod.fst <| sum_bool b (head y) false)).2 := by
+      match b, (head y) with
+      | true, true =>
+        rw [sum_bool]
+        simp
+        sorry
+      | false, true =>
+        rw [sum_bool]
+        simp
+        sorry
+      | true, false =>
+        rw [sum_bool]
+        simp
+        sorry
+      | false, false =>
+        rw [sum_bool]
+        simp
+        sorry
+    rw [this]
+    simp only [ofVector_cons]
+    rw [head_tail_eq]
+    apply And.intro
+    case left =>
+      rw [head_cons, head_cons]
+    case right =>
+      rw [tail_cons, tail_cons]
+      match b, (head y) with
+      | true, true =>
+        simp [sum_bool]
+        have : adc x (tail y) true = x + (tail y) + 1 := by
+          simp [adc]
+          rw [<-BitVec.add_eq]
+          simp [BitVec.add]
+          rfl
+        rw [this, ih]
+        sorry
+      | false, _ | _, false =>
+        simp [sum_bool]
+        have : adc x (tail y) false = x + (tail y) := by
+          simp [adc]
+          rw [<-BitVec.add_eq]
+          simp [BitVec.add]
+        rw [this]
+        rw [ih]
+        simp [sum_bool]
+
+/- Sub_Asvector theorem-/
+def sub_bool (x y c : Bool) : Bool × Bool :=
+  (or (and (not x) y) (and (not x) c), xor (xor (not x) y) c)
+
+theorem sub_cons {x y : Bool} {xs ys : BitVec n} :
+    (cons x xs) - (cons y ys) = cons (Prod.snd (sub_bool x y false)) (Prod.snd (sbb xs ys (Prod.fst (sub_bool x y false)))) := by
+  rw [<-asVector_eq]
+  simp only [asVector_cons]
+  apply vectorEquiv.right_inv
 
 theorem sub_asVector :
     x - y = (ofVector <| Prod.snd <|
-      Vector.mapAccumr₂ (fun x y c => (_, _)) x.asVector y.asVector false
+      Vector.mapAccumr₂ (fun x y c => (sub_bool x y c)) x.asVector y.asVector false
     ) := by
   induction x using consRecursion
   case nil =>
@@ -393,9 +543,42 @@ theorem sub_asVector :
     have : y = nil := by simp only [zero_length_eq_nil]
     rw [this]
     rfl
-  case cons b x ih =>
-    simp only [consRecursion_cons, asVector_cons]
-    sorry
+  case ind b x ih =>
+    simp only [asVector_cons]
+    rw [cons_head_tail_eq y]
+    simp only [sub_cons, asVector_cons]
+    have : (Vector.mapAccumr₂ (fun x y c => sub_bool x y c) (Vector.cons b (asVector x)) (Vector.cons (head y) (asVector (tail y))) false).2 =
+      Vector.cons (sub_bool b (head y) false).2 (Vector.mapAccumr₂ (fun x y c => sub_bool x y c) (asVector x) (asVector (tail y)) (Prod.fst <| sub_bool b (head y) false)).2 := by
+      sorry
+    rw [this]
+    simp only [ofVector_cons]
+    rw [head_tail_eq]
+    apply And.intro
+    case left =>
+      rw [head_cons, head_cons]
+    case right =>
+      rw [tail_cons, tail_cons]
+      match b, (head y) with
+      | false, true =>
+        simp [sub_bool]
+        have : Prod.snd (sbb x (tail y) true) = x - (tail y) - 1 := by
+          simp only [sbb]
+          rw [<-BitVec.sub_eq]
+          simp [BitVec.sub]
+          sorry
+        rw [this]
+        rw [ih]
+        sorry
+      | true, _ | _, false =>
+        simp [sub_bool]
+        have : Prod.snd (sbb x (tail y) false) = x - (tail y) := by
+          simp [sbb]
+          rw [<-BitVec.sub_eq]
+          simp [BitVec.sub]
+          sorry
+        rw [this]
+        rw [ih]
+        simp [sub_bool]
 
 /-
   TODO: `mul`, `div`, `mod`
