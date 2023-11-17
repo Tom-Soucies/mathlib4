@@ -1,17 +1,11 @@
 /-
 Copyright (c) 2020 Markus Himmel. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Markus Himmel, Harun Khan, Abdalrhman M Mohamed, Alex Keizer
+Authors: Markus Himmel, Alex Keizer
 -/
 import Mathlib.Data.List.Basic
-import Mathlib.Data.Bool.Basic
-import Mathlib.Data.Nat.ModEq
-import Mathlib.Data.Nat.Bits
 import Mathlib.Data.Nat.Size
-import Mathlib.Data.Nat.Order.Lemmas
-import Mathlib.Data.Fin.Tuple.Basic
 import Mathlib.Tactic.Set
-import Mathlib.Tactic.Linarith
 
 #align_import data.nat.bitwise from "leanprover-community/mathlib"@"6afc9b06856ad973f6a2619e3e8a0a8d537a58f2"
 
@@ -179,10 +173,6 @@ theorem bit_eq_zero {n : ℕ} {b : Bool} : n.bit b = 0 ↔ n = 0 ∧ b = false :
   cases b <;> simp [Nat.bit0_eq_zero, Nat.bit1_ne_zero]
 #align nat.bit_eq_zero Nat.bit_eq_zero
 
-theorem bodd_eq_bodd_iff {m n} : bodd n = bodd m ↔ n % 2 = m % 2 := by
-  cases' hn : bodd n <;> cases' hm : bodd m
-  <;> simp [mod_two_of_bodd, hn, hm]
-
 theorem bit_ne_zero_iff {n : ℕ} {b : Bool} : n.bit b ≠ 0 ↔ n = 0 → b = true := by
   simpa only [not_and, Bool.not_eq_false] using (@bit_eq_zero n b).not
 
@@ -222,9 +212,6 @@ theorem zero_of_testBit_eq_false {n : ℕ} (h : ∀ i, testBit n i = false) : n 
   · have : b = false := by simpa using h 0
     rw [this, bit_false, bit0_val, hn fun i => by rw [← h (i + 1), testBit_succ], mul_zero]
 #align nat.zero_of_test_bit_eq_ff Nat.zero_of_testBit_eq_false
-
-theorem testBit_eq_false_of_lt {n i} (h : n < 2 ^ i) : n.testBit i = false := by
-  simp [testBit, shiftRight_eq_div_pow, Nat.div_eq_of_lt h]
 
 @[simp]
 theorem zero_testBit (i : ℕ) : testBit 0 i = false := by
@@ -327,12 +314,6 @@ theorem testBit_two_pow (n m : ℕ) : testBit (2 ^ n) m = (n = m) := by
     simp [h]
 #align nat.test_bit_two_pow Nat.testBit_two_pow
 
-lemma and_two_pow {n i} : n &&& 2 ^ i = (n.testBit i).toNat * 2 ^ i := by
-  apply eq_of_testBit_eq; intro j
-  rw [mul_comm, testBit_land]
-  cases' h : n.testBit i <;> cases' (ne_or_eq i j) with h1 h1
-  <;> simp [testBit_two_pow_of_ne _, *] at * <;> assumption
-
 theorem bitwise_swap {f : Bool → Bool → Bool} :
     bitwise (Function.swap f) = Function.swap (bitwise f) := by
   funext m n
@@ -345,97 +326,6 @@ theorem bitwise_swap {f : Bool → Bool → Bool} :
     simp [bitwise_of_ne_zero, ih]
 #align nat.bitwise_swap Nat.bitwise_swap
 
-theorem testBit_two_pow_mul_add {n b w i} (h: i < w) :
-    Nat.testBit (2 ^ w * b + n) i = Nat.testBit n i := by
-  simp only [testBit, shiftRight_eq_div_pow, bodd_eq_bodd_iff]
-  rw [Nat.add_div_of_dvd_right (by simp [Dvd.dvd.mul_right, pow_dvd_pow, le_of_lt h]), add_mod]
-  have h1: (2 ^ w / 2 ^ i) % 2 = 0 := by
-    rw [← Nat.dvd_iff_mod_eq_zero]
-    use 2 ^ (w - (i + 1))
-    rw [Nat.pow_div (by linarith) (by decide), mul_comm, ← pow_succ 2 _, succ_eq_add_one]
-    simp [← Nat.sub_add_comm, succ_le_of_lt h]
-  simp [mul_comm, Nat.mul_div_assoc b (pow_dvd_pow 2 (le_of_lt h)), mul_mod, h1]
-
-theorem testBit_two_pow_mul_toNat_add {n w b} (h: n < 2 ^ w) :
-    testBit (2 ^ w * b.toNat + n) w = b := by
-  simp only [testBit, shiftRight_eq_div_pow]
-  rw [Nat.add_div_of_dvd_right (Dvd.intro _ rfl), Nat.div_eq_of_lt h, add_zero]
-  cases' b <;> simp
-
-/-- Generic method to create a natural number by appending bits tail-recursively.
-It takes a boolean function `f` on each bit the number of bits `i`.  It is
-almost always specialized  `i = w`; the length of the binary representation.
-This is an alternative to using `List`. It will be used for bitadd, bitneg, bitmul etc.-/
-def ofBits {n : Nat} (f : Fin n → Bool) : Nat :=
-  go f 0
-  where
-    /-- A helper method where `z` the starting point.
-    Note that `ofBits.go f z = 2 ^ n * z + ofBits f i` which we prove next. -/
-    go {n : Nat} (f : Fin n → Bool) (z : Nat) : Nat :=
-    match n with
-    | 0 => z
-    | _ + 1 => go (f ∘ Fin.castSucc) (z.bit (f (.last _)))
-
-@[simp]
-theorem ofBits_cons {n} (x : Bool) (f : Fin n → Bool) :
-    ofBits (Fin.cons x f) = bit x (ofBits f) := by
-  rw [ofBits, ofBits]
-  sorry
-
-theorem ofBits_go_eq_pow_mul_add {n} (f : Fin n → Bool) (z : Nat) :
-    ofBits.go f z = 2 ^ n * z + ofBits f := by
-  induction' n with i ih generalizing z
-  · simp [ofBits, ofBits.go, bit_val]
-  · simp only [ofBits, ofBits.go, ih _ (bit (f _) 0), @ih _ (bit (f _) z)]
-    rw [bit_val, mul_add, ← mul_assoc, ← pow_succ]
-    simp [bit_val, add_assoc]
-
-theorem ofBits_lt {n} (f : Fin n → Bool) : ofBits f < 2 ^ n := by
-  induction' n with i ih
-  · simp [ofBits, ofBits.go, bit_val, lt_succ, Bool.toNat_le_one]
-  · simp only [ofBits, ofBits.go]
-    rw [ofBits_go_eq_pow_mul_add]
-    replace ih := ih (f ∘ Fin.castSucc)
-    rw [ofBits] at ih
-    cases' (f <| .last _) <;> simp [two_pow_succ, ih, ofBits]; linarith
-
-/-- The `ith` bit of `ofBits` is the function at `i`.
-This is used extensively in the proof of each of the bitadd, bitneg, bitmul etc.-/
--- theorem testBit_ofBits {f i j} (h1: i < j) : (ofBits f j).testBit i = f i := by
-theorem testBit_ofBits {j} {i : Fin j } {f : Fin j → Bool } : (ofBits f).testBit i = f i := by
-  stop
-  induction' j, (pos_of_gt i.2) using Nat.le_induction with j _ ih -- generalizing i
-  · simp only [Fin.fin_one_eq_zero, ofBits, ofBits.go, bit_zero, lt_one_iff.1 i.2,
-      Fin.coe_fin_one]; cases (f 0) <;> rfl
-  · cases' i using Fin.reverseInduction
-    · rw [ofBits, ofBits.go, ofBits_go_eq_pow_mul_add, bit_zero]
-      have H := ofBits_lt f
-      -- have K := testBit_two_pow_mul_toNat_add H
-
-
-        -- testBit_two_pow_mul_toNat_add (ofBits_lt)]
-    simp only [Fin.fin_zero_eq_last, ofBits, ofBits.go, bit_zero, Fin.coe_last]
-    cases (f .last) <;> rfl
-    · simp only [Fin.coe_last, Fin.coe_cast_succ, ofBits, ofBits.go, bit_val]
-      rw [testBit_two_pow_mul_add (Nat.lt_succ_of_le (Nat.le_of_lt_succ i.2)), ih]
-      cases' (f i) <;> simp
-
-  -- v TODO: this should probably be related by a cases on the `i` or something.
-  · cases' lt_or_eq_of_le (lt_succ_iff.mp i.2) with h1 h1
-    -- · let i' : Fin j := { val := i.val, isLt := h1 }
-    · let i' : Fin j := i.castPred
-      have I'VAL : (↑i' : Nat) = (↑i : Nat) := by simp[Fin.coe_castPred i' h1]
-      rw [← I'VAL]
-      -- ← ih (i := i') (f := f),
-      rw [ofBits, ofBits.go, ofBits_go_eq_pow_mul_add, ofBits,
-          testBit_two_pow_mul_add h1]
-      unfold ofBits at ih
-      rw [← I'VAL]
-      rw [ih (i := i') (f := f ∘ Fin.castSucc)]
-      rw[Fin.castSucc_castPred] -- this is going to be a pain, because it expects Fin (i + 2).
-    · rw [h1, ofBits, ofBits.go, ofBits_go_eq_pow_mul_add, bit_zero,
-        testBit_two_pow_mul_toNat_add (ofBits_lt)]
-
 /-- If `f` is a commutative operation on bools such that `f false false = false`, then `bitwise f`
     is also commutative. -/
 theorem bitwise_comm {f : Bool → Bool → Bool} (hf : ∀ b b', f b b' = f b' b) (n m : ℕ) :
@@ -445,24 +335,6 @@ theorem bitwise_comm {f : Bool → Bool → Bool} (hf : ∀ b b', f b b' = f b' 
     bitwise f = bitwise (swap f) := congr_arg _ <| funext fun _ => funext <| hf _
     _ = swap (bitwise f) := bitwise_swap
 #align nat.bitwise_comm Nat.bitwise_comm
-
-theorem bitwise_lt {f x y n} (hx : x < 2 ^ n) (hy: y < 2 ^ n) (h: f false false = false) :
-    bitwise f x y < 2 ^ n := by
-  apply lt_of_testBit n (by simp [testBit_bitwise h x y n,
-                                  testBit_eq_false_of_lt hx,
-                                  testBit_eq_false_of_lt hy, h])
-                        (testBit_two_pow_self n)
-  intro j hj; rw [testBit_bitwise h x y j]
-  rw [testBit_eq_false_of_lt (lt_trans hx (pow_lt_pow_of_lt_right (by decide) hj))]
-  rw [testBit_eq_false_of_lt (lt_trans hy (pow_lt_pow_of_lt_right (by decide) hj)), h]
-  rw [testBit_two_pow_of_ne (ne_of_lt hj)]
-
-lemma append_lt {x y n m} (hx : x < 2 ^ n) (hy: y < 2 ^ m) : y <<< n ||| x < 2 ^ (n + m) := by
-  have H: x < 2 ^ (n + m) ∧ y * 2 ^ n < 2 ^ (n + m):= by
-    apply And.intro
-    · exact lt_of_lt_of_le hx ((pow_add 2 n m).symm ▸ le_mul_of_one_le_right' (by linarith))
-    · rw [pow_add, mul_comm]; simp[hy, mul_lt_mul_left (two_pow_pos n)]
-  simp only [lor, shiftLeft_eq]; exact bitwise_lt H.2 H.1 rfl
 
 theorem lor_comm (n m : ℕ) : n ||| m = m ||| n :=
   bitwise_comm Bool.or_comm n m
