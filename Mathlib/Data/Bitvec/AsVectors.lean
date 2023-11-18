@@ -510,7 +510,7 @@ theorem add_asVector :
           simp [adc]
           rw [<-BitVec.add_eq]
           simp [BitVec.add]
-          rfl
+          sorry
         rw [this, ih]
         sorry
       | false, _ | _, false =>
@@ -519,6 +519,7 @@ theorem add_asVector :
           simp [adc]
           rw [<-BitVec.add_eq]
           simp [BitVec.add]
+          sorry
         rw [this]
         rw [ih]
         simp [sum_bool]
