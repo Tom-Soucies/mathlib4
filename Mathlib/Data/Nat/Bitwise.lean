@@ -1,7 +1,7 @@
 /-
 Copyright (c) 2020 Markus Himmel. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Markus Himmel, Alex Keizer
+Authors: Markus Himmel, Harun Khan, Abdalrhman M Mohamed, Alex Keizer
 -/
 import Mathlib.Data.List.Basic
 import Mathlib.Data.Nat.Size
@@ -82,17 +82,18 @@ theorem binaryRec_of_ne_zero {C : Nat → Sort*} (z : C 0) (f : ∀ b n, C n →
 lemma bitwise_bit {f : Bool → Bool → Bool} (h : f false false = false := by rfl) (a m b n) :
     bitwise f (bit a m) (bit b n) = bit (f a b) (bitwise f m n) := by
   conv_lhs => unfold bitwise
-  simp only [bit, bit1, bit0, Bool.cond_eq_ite]
+  simp (config := { unfoldPartialApp := true }) only [bit, bit1, bit0, Bool.cond_eq_ite]
   have h1 x :     (x + x) % 2 = 0 := by rw [← two_mul, mul_comm]; apply mul_mod_left
   have h2 x : (x + x + 1) % 2 = 1 := by rw [← two_mul, add_comm]; apply add_mul_mod_self_left
   have h3 x :     (x + x) / 2 = x := by rw [← two_mul, mul_comm]; apply mul_div_left _ zero_lt_two
-  have h4 x : (x + x + 1) / 2 = x := by rw [← two_mul, add_comm]; simp [add_mul_div_left]
-  cases a <;> cases b <;> simp [h1, h2, h3, h4] <;> split_ifs <;> simp_all
+  have h4 x : (x + x + 1) / 2 = x := by rw [← two_mul, add_comm]; simp [add_mul_div_left]; rfl
+  cases a <;> cases b <;> simp [h1, h2, h3, h4] <;> split_ifs
+    <;> simp_all (config := {decide := true})
 #align nat.bitwise_bit Nat.bitwise_bit
 
 lemma bit_mod_two (a : Bool) (x : ℕ) :
     bit a x % 2 = if a then 1 else 0 := by
-  simp [bit, bit0, bit1, Bool.cond_eq_ite, ←mul_two]
+  simp (config := { unfoldPartialApp := true }) [bit, bit0, bit1, Bool.cond_eq_ite, ←mul_two]
   split_ifs <;> simp [Nat.add_mod]
 
 @[simp]
@@ -213,6 +214,9 @@ theorem zero_of_testBit_eq_false {n : ℕ} (h : ∀ i, testBit n i = false) : n 
     rw [this, bit_false, bit0_val, hn fun i => by rw [← h (i + 1), testBit_succ], mul_zero]
 #align nat.zero_of_test_bit_eq_ff Nat.zero_of_testBit_eq_false
 
+theorem testBit_eq_false_of_lt {n i} (h : n < 2 ^ i) : n.testBit i = false := by
+  simp [testBit, shiftRight_eq_div_pow, Nat.div_eq_of_lt h]
+
 @[simp]
 theorem zero_testBit (i : ℕ) : testBit 0 i = false := by
   simp only [testBit, zero_shiftRight, bodd_zero]
@@ -304,6 +308,7 @@ theorem testBit_two_pow_of_ne {n m : ℕ} (hm : n ≠ m) : testBit (2 ^ n) m = f
     rw [(rfl : succ 0 = 1)]
     simp only [ge_iff_le, tsub_le_iff_right, pow_succ, bodd_mul,
       Bool.and_eq_false_eq_eq_false_or_eq_false, or_true]
+    exact Or.inr rfl
 #align nat.test_bit_two_pow_of_ne Nat.testBit_two_pow_of_ne
 
 theorem testBit_two_pow (n m : ℕ) : testBit (2 ^ n) m = (n = m) := by
@@ -313,6 +318,12 @@ theorem testBit_two_pow (n m : ℕ) : testBit (2 ^ n) m = (n = m) := by
   · rw [testBit_two_pow_of_ne h]
     simp [h]
 #align nat.test_bit_two_pow Nat.testBit_two_pow
+
+lemma and_two_pow {n i} : n &&& 2 ^ i = (n.testBit i).toNat * 2 ^ i := by
+  apply eq_of_testBit_eq; intro j
+  rw [mul_comm, testBit_land]
+  cases' h : n.testBit i <;> cases' (ne_or_eq i j) with h1 h1
+  <;> simp [testBit_two_pow_of_ne _, *] at * <;> assumption
 
 theorem bitwise_swap {f : Bool → Bool → Bool} :
     bitwise (Function.swap f) = Function.swap (bitwise f) := by
@@ -336,6 +347,32 @@ theorem bitwise_comm {f : Bool → Bool → Bool} (hf : ∀ b b', f b b' = f b' 
     _ = swap (bitwise f) := bitwise_swap
 #align nat.bitwise_comm Nat.bitwise_comm
 
+@[simp] theorem bit_lt_two_pow_succ_iff {b x n} : bit b x < 2 ^ (n + 1) ↔ x < 2 ^ n := by
+  rw [pow_succ', ←bit0_eq_two_mul]
+  cases b <;> simp
+
+/-- If `x` and `y` fit within `n` bits, then the result of any (well-behaved) bitwise operation on
+    `x` and `y` also fits within `n` bits -/
+theorem bitwise_lt {f x y n} (hx : x < 2 ^ n) (hy: y < 2 ^ n) :
+    bitwise f x y < 2 ^ n := by
+  induction x using Nat.binaryRec' generalizing n y with
+  | z => aesop
+  | @f bx nx hnx ih =>
+    cases y using Nat.binaryRec' with
+    | z => aesop
+    | f «by» ny hny =>
+      cases n with
+      | zero => aesop
+      | succ n =>
+        rw [bitwise_bit' _ _ _ _ hnx hny]
+        aesop
+
+lemma append_lt {x y n m} (hx : x < 2 ^ n) (hy: y < 2 ^ m) : y <<< n ||| x < 2 ^ (n + m) := by
+  apply bitwise_lt
+  · rw [pow_add, mul_comm]
+    simp [hy, mul_lt_mul_left (two_pow_pos n)]
+  · exact lt_of_lt_of_le hx ((pow_add 2 n m).symm ▸ le_mul_of_one_le_right' (one_le_two_pow m))
+
 theorem lor_comm (n m : ℕ) : n ||| m = m ||| n :=
   bitwise_comm Bool.or_comm n m
 #align nat.lor_comm Nat.lor_comm
@@ -349,8 +386,7 @@ theorem xor_comm (n m : ℕ) : n ^^^ m = m ^^^ n :=
 #align nat.lxor_comm Nat.xor_comm
 
 @[simp]
-theorem zero_xor (n : ℕ) : 0 ^^^ n = n := by
- simp only [HXor.hXor, Xor.xor, xor, bitwise_zero_left, ite_true]
+theorem zero_xor (n : ℕ) : 0 ^^^ n = n := by simp [HXor.hXor, Xor.xor, xor]
 #align nat.zero_lxor Nat.zero_xor
 
 @[simp]
@@ -359,22 +395,22 @@ theorem xor_zero (n : ℕ) : n ^^^ 0 = n := by simp [HXor.hXor, Xor.xor, xor]
 
 @[simp]
 theorem zero_land (n : ℕ) : 0 &&& n = 0 := by
-  simp only [HAnd.hAnd, AndOp.and, land, bitwise_zero_left, ite_false];
+  simp only [HAnd.hAnd, AndOp.and, land, bitwise_zero_left, ite_false, Bool.and_true];
 #align nat.zero_land Nat.zero_land
 
 @[simp]
 theorem land_zero (n : ℕ) : n &&& 0 = 0 := by
-  simp only [HAnd.hAnd, AndOp.and, land, bitwise_zero_right, ite_false]
+  simp only [HAnd.hAnd, AndOp.and, land, bitwise_zero_right, ite_false, Bool.and_false]
 #align nat.land_zero Nat.land_zero
 
 @[simp]
 theorem zero_lor (n : ℕ) : 0 ||| n = n := by
-  simp only [HOr.hOr, OrOp.or, lor, bitwise_zero_left, ite_true]
+  simp only [HOr.hOr, OrOp.or, lor, bitwise_zero_left, ite_true, Bool.or_true]
 #align nat.zero_lor Nat.zero_lor
 
 @[simp]
 theorem lor_zero (n : ℕ) : n ||| 0 = n := by
-  simp only [HOr.hOr, OrOp.or, lor, bitwise_zero_right, ite_true]
+  simp only [HOr.hOr, OrOp.or, lor, bitwise_zero_right, ite_true, Bool.or_false]
 #align nat.lor_zero Nat.lor_zero
 
 
