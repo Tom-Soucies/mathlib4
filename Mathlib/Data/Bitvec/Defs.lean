@@ -59,7 +59,7 @@ namespace Std.BitVec
 
 #align bitvec.neg Std.BitVec.neg
 /-- Add with carry (no overflow) -/
-def adc {n} (x y : BitVec n) (c : Bool) : BitVec (n+1) :=
+def adc {n} (x y : BitVec n) (c : Bool) : BitVec (n) :=
   ofFin (x.toNat + y.toNat + c.toNat)
 #align bitvec.adc Std.BitVec.adc
 

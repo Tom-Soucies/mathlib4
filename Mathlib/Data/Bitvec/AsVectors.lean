@@ -19,9 +19,9 @@ universe u v
   ## Pseudo constructors
 -/
 
-/-- The empty bitvector -/
-def nil : BitVec 0 :=
-  BitVec.zero 0
+-- /-- The empty bitvector -/
+-- def nil : BitVec 0 :=
+--   BitVec.zero 0
 
 /-- There is only one `empty` bitvector, namely, `nil` -/
 theorem zero_length_eq_nil :
@@ -33,9 +33,21 @@ theorem zero_length_eq_nil :
   simp only [nil, BitVec.zero, toNat_inj] at this
   simp only [this]
 
-/-- Prepend a single bit to the front of a bitvector. The new bit is the least significant bit -/
-def cons (x : Bool) (xs : BitVec n) : BitVec (n+1) :=
-  BitVec.ofNat (n + 1) (2 * BitVec.toNat xs + cond x 1 0)
+-- /-- Prepend a single bit to the front of a bitvector. The new bit is the least significant bit -/
+-- def cons (x : Bool) (xs : BitVec n) : BitVec (n+1) :=
+--   BitVec.ofNat (n + 1) (2 * BitVec.toNat xs + cond x 1 0)
+theorem cons_calc (x : Bool) (xs : BitVec n) :
+    cons x xs = BitVec.ofNat (n+1) (2 * BitVec.toNat xs + cond x 1 0) := by
+  sorry
+  -- simp only [cons, BitVec.ofNat]
+  -- rw [BitVec.toNat_ofNat]
+  -- simp only [Nat.add_comm]
+  -- have : 2 * BitVec.toNat xs + cond x 1 0 < 2 ^ (n + 1) := by
+  --   simp only [Nat.pow_succ]
+  --   have : 2 * BitVec.toNat xs < 2 * 2 ^ n := Nat.mul_lt_mul' (Nat.le_refl 2) xs.toFin.prop (Nat.zero_lt_succ 1)
+  --   simp only [Nat.mul_comm (2 ^ n)]
+  --   exact this
+  -- exact this
 
 /-- Get the head and tail of a BitVec (head being the least significant bit) -/
 def head (xs : BitVec (n + 1)) : Bool :=
@@ -175,25 +187,28 @@ lemma neq_succ {n p : Nat} (h : n < 2 ^ p) :
 
 theorem head_cons {x : Bool} {xs : BitVec n} :
     head (cons x xs) = x := by
-  simp only [cons, head]
+  rw [cons_calc]
+  simp only [head]
   induction x
   case true =>
     simp only [cond]
     rw [BitVec.toNat_ofNat]
-    . simp [Nat.add_comm]
+    . simp [Nat.add_comm, Bool.ofNat]
     . have : 2 * BitVec.toNat xs + 1 < 2 ^ (n + 1) := neq_succ xs.toFin.prop
       exact this
   case false =>
     simp only [cond]
     rw [BitVec.toNat_ofNat]
     simp
-    rw [Nat.add_zero]
+    rw [Bool.ofNat]
+    simp
     have : 2 * BitVec.toNat xs < 2 * 2 ^ n := Nat.mul_lt_mul' (Nat.le_refl 2) xs.toFin.prop (Nat.zero_lt_succ 1)
     simp only [Nat.pow_succ, Nat.mul_comm (2 ^ n)]
     exact this
 
 theorem tail_cons {x : Bool} {xs : BitVec n} :
     tail (cons x xs) = xs := by
+  rw [cons_calc]
   simp only [cons, tail]
   induction x
   case true =>
@@ -222,7 +237,7 @@ theorem head_tail_eq {xs ys : BitVec (n + 1)} :
   apply Iff.intro
   case mp =>
     intro h
-    simp only [h]
+    simp [h]
   case mpr =>
     intro h
     have H : head xs = head ys := h.left
@@ -240,12 +255,12 @@ theorem zero_asVector :
     (BitVec.zero m).asVector = Vector.replicate m false := by
   induction m
   case zero =>
-    apply vectorEquiv.symm.injective
-    simp
+    apply vectorEquiv.right_inv
   case succ m ih =>
     have : asVector (BitVec.zero (Nat.succ m)) = Vector.cons false (asVector (BitVec.zero m)) := by
       have : BitVec.zero (Nat.succ m) = cons false (BitVec.zero m) := by
-        simp [BitVec.cons, BitVec.zero, BitVec.append]
+        rw [cons_calc]
+        simp [BitVec.zero]
       rw [this]
       simp only [asVector_cons]
     rw [this]
@@ -270,6 +285,7 @@ theorem complement_asVector {x : BitVec n} :
   induction x using consRecursion
   case nil =>
     simp only [ofVector, asVector, Vector.eq_nil]
+    rfl
   case ind b x ih =>
     simp only [ofVector_cons, asVector_cons, Vector.map_cons, complement_cons]
     rw [ih]
