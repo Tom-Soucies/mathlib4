@@ -33,41 +33,29 @@ theorem zero_length_eq_nil :
   simp only [nil, BitVec.zero, toNat_inj] at this
   simp only [this]
 
--- /-- Prepend a single bit to the front of a bitvector. The new bit is the least significant bit -/
--- def cons (x : Bool) (xs : BitVec n) : BitVec (n+1) :=
---   BitVec.ofNat (n + 1) (2 * BitVec.toNat xs + cond x 1 0)
-theorem cons_calc (x : Bool) (xs : BitVec n) :
-    cons x xs = BitVec.ofNat (n+1) (2 * BitVec.toNat xs + cond x 1 0) := by
-  sorry
-  -- simp only [cons, BitVec.ofNat]
-  -- rw [BitVec.toNat_ofNat]
-  -- simp only [Nat.add_comm]
-  -- have : 2 * BitVec.toNat xs + cond x 1 0 < 2 ^ (n + 1) := by
-  --   simp only [Nat.pow_succ]
-  --   have : 2 * BitVec.toNat xs < 2 * 2 ^ n := Nat.mul_lt_mul' (Nat.le_refl 2) xs.toFin.prop (Nat.zero_lt_succ 1)
-  --   simp only [Nat.mul_comm (2 ^ n)]
-  --   exact this
-  -- exact this
-
 /-- Get the head and tail of a BitVec (head being the least significant bit) -/
 def head (xs : BitVec (n + 1)) : Bool :=
-  Bool.ofNat (BitVec.toNat xs % 2)
+  BitVec.getLsb xs 0
 
 def tail (xs : BitVec (n + 1)) : BitVec n :=
-  BitVec.ofNat n (Nat.div2 (BitVec.toNat xs))
+  BitVec.extractLsb' 1 n xs
 
--- /- Todo : prove equivalence between this and getlsb (same thing for extractlsb) -/
--- theorem head_as_getlsb {n : Nat} (xs : BitVec (n + 1)) :
---     head xs = BitVec.getLsb xs 0 := by
---   sorry
+-- /-- Prepend a single bit to the front of a bitvector. The new bit is the least significant bit -/
+theorem cons_as_math (x : Bool) (xs : BitVec n) :
+    cons x xs = BitVec.ofNat (n+1) (2 * BitVec.toNat xs + cond x 1 0) := by
+  simp only [cons]
+  sorry
 
--- theorem tail_as_extractlsb {n : Nat} (xs : BitVec (n + 1)) :
---     tail xs = BitVec.extractLsb' 1 n xs := by
---   sorry
+/- Todo : prove equivalence between this and getlsb (same thing for extractlsb) -/
+theorem head_as_math {n : Nat} (xs : BitVec (n + 1)) :
+    head xs = Bool.ofNat (BitVec.toNat xs % 2) := by
+  simp only [head]
+  sorry
 
--- theorem cons_as_append {x : Bool} {xs : BitVec n} :
---     cons x xs = BitVec.append xs (cond x (BitVec.zero 1) (BitVec.one 1)) := by
---   sorry
+theorem tail_as_math {n : Nat} (xs : BitVec (n + 1)) :
+    tail xs = BitVec.ofNat n (Nat.div2 (BitVec.toNat xs)) := by
+  simp only [tail]
+  sorry
 
 
 /-!
@@ -187,8 +175,7 @@ lemma neq_succ {n p : Nat} (h : n < 2 ^ p) :
 
 theorem head_cons {x : Bool} {xs : BitVec n} :
     head (cons x xs) = x := by
-  rw [cons_calc]
-  simp only [head]
+  rw [cons_as_math, head_as_math]
   induction x
   case true =>
     simp only [cond]
@@ -208,8 +195,7 @@ theorem head_cons {x : Bool} {xs : BitVec n} :
 
 theorem tail_cons {x : Bool} {xs : BitVec n} :
     tail (cons x xs) = xs := by
-  rw [cons_calc]
-  simp only [cons, tail]
+  rw [cons_as_math, tail_as_math]
   induction x
   case true =>
     simp only [cond]
@@ -259,8 +245,7 @@ theorem zero_asVector :
   case succ m ih =>
     have : asVector (BitVec.zero (Nat.succ m)) = Vector.cons false (asVector (BitVec.zero m)) := by
       have : BitVec.zero (Nat.succ m) = cons false (BitVec.zero m) := by
-        rw [cons_calc]
-        simp [BitVec.zero]
+        simp [cons_as_math]
       rw [this]
       simp only [asVector_cons]
     rw [this]
@@ -435,78 +420,6 @@ theorem add_asVector :
     rw [this]
     rfl
   case ind b x ih =>
-    -- simp only [asVector_cons]
-    -- rw [cons_head_tail_eq y]
-    -- simp only [add_cons, asVector_cons]
-    -- match b, (head y) with
-    -- | true, true =>
-    --   rw [sum_bool]
-    --   simp
-    --   have : (Vector.mapAccumr₂ (fun x y c ↦ sum_bool x y c) (Vector.cons true (asVector x)) (Vector.cons true (asVector (tail y))) false).2 =
-    --     Vector.cons (sum_bool true true false).2 (Vector.mapAccumr₂ (fun x y c ↦ sum_bool x y c) (asVector x) (asVector (tail y)) (Prod.fst <| sum_bool true true false)).2 := by
-    --     sorry
-    --   rw [this, sum_bool]
-    --   simp [ofVector_cons]
-    --   rw [head_tail_eq]
-    --   apply And.intro
-    --   case left =>
-    --     rw [head_cons, head_cons]
-    --   case right =>
-    --     rw [tail_cons, tail_cons]
-    --     simp [sum_bool]
-    --     have : adc x (tail y) true = x + (tail y) + 1 := by
-    --       simp [adc]
-    --       rw [<-BitVec.add_eq]
-    --       simp [BitVec.add]
-    --       rfl
-    --     rw [this]
-    --     rw [ih]
-    --     sorry
-    -- | false, _ =>
-    --   rw [sum_bool]
-    --   simp
-    --   have {z : Bool} : (Vector.mapAccumr₂ (fun x y c ↦ sum_bool x y c) (Vector.cons false (asVector x)) (Vector.cons z (asVector (tail y))) false).2 =
-    --     Vector.cons (sum_bool false z false).2 (Vector.mapAccumr₂ (fun x y c ↦ sum_bool x y c) (asVector x) (asVector (tail y)) (Prod.fst <| sum_bool false z false)).2 := by
-    --     sorry
-    --   rw [this, sum_bool]
-    --   simp [ofVector_cons]
-    --   rw [head_tail_eq]
-    --   apply And.intro
-    --   case left =>
-    --     rw [head_cons, head_cons]
-    --   case right =>
-    --     rw [tail_cons, tail_cons]
-    --     simp [sum_bool]
-    --     have : adc x (tail y) false = x + (tail y) := by
-    --       simp [adc]
-    --       rw [<-BitVec.add_eq]
-    --       simp [BitVec.add]
-    --     rw [this]
-    --     rw [ih]
-    --     simp [sum_bool]
-    -- | _, false =>
-    --   rw [sum_bool]
-    --   simp
-    --   have {z : Bool} : (Vector.mapAccumr₂ (fun x y c ↦ sum_bool x y c) (Vector.cons z (asVector x)) (Vector.cons false (asVector (tail y))) false).2 =
-    --     Vector.cons (sum_bool z false false).2 (Vector.mapAccumr₂ (fun x y c ↦ sum_bool x y c) (asVector x) (asVector (tail y)) (Prod.fst <| sum_bool z false false)).2 := by
-    --     sorry
-    --   rw [this, sum_bool]
-    --   simp [ofVector_cons]
-    --   rw [head_tail_eq]
-    --   apply And.intro
-    --   case left =>
-    --     rw [head_cons, head_cons]
-    --   case right =>
-    --     rw [tail_cons, tail_cons]
-    --     simp [sum_bool]
-    --     have : adc x (tail y) false = x + (tail y) := by
-    --       simp [adc]
-    --       rw [<-BitVec.add_eq]
-    --       simp [BitVec.add]
-    --     rw [this]
-    --     rw [ih]
-    --     simp [sum_bool]
-
     simp only [asVector_cons]
     rw [cons_head_tail_eq y]
     simp only [add_cons, asVector_cons]
