@@ -392,6 +392,24 @@ theorem xor_asVector :
   TODO: `lt`, `le`, `slt`, `sle`, `sgt`, `sge`
 -/
 
+/- Lt_AsVector theorem -/
+def lt_bool (x y c : Bool) : Bool × Bool :=
+  ((!x && y) || (x == y && c), false)
+
+theorem lt_asVector :
+    BitVec.ult x y = (Prod.fst <|
+      Vector.mapAccumr₂ lt_bool (asVector x) (asVector y) false
+    ) := by
+  induction x using consRecursion
+  case nil =>
+    simp only [zero_length_eq_nil]
+    sorry
+  case ind b x ih =>
+    simp only [asVector_cons]
+    rw [cons_head_tail_eq y]
+    simp only [asVector_cons]
+    sorry
+
 /-!
   ## Arithmetic
 -/
@@ -408,7 +426,7 @@ theorem add_cons {x y : Bool} {xs ys : BitVec n} :
 
 theorem add_asVector :
     x + y = (ofVector <| Prod.snd <|
-      Vector.mapAccumr₂ (fun x y c => (sum_bool x y c)) (asVector x) (asVector y) false
+      Vector.mapAccumr₂ sum_bool (asVector x) (asVector y) false
     ) := by
   induction x using consRecursion
   case nil =>
@@ -492,8 +510,8 @@ theorem add_asVector :
     simp only [asVector_cons]
     rw [cons_head_tail_eq y]
     simp only [add_cons, asVector_cons]
-    have : (Vector.mapAccumr₂ (fun x y c => sum_bool x y c) (Vector.cons b (asVector x)) (Vector.cons (head y) (asVector (tail y))) false).2 =
-      Vector.cons (sum_bool b (head y) false).2 (Vector.mapAccumr₂ (fun x y c => sum_bool x y c) (asVector x) (asVector (tail y)) (Prod.fst <| sum_bool b (head y) false)).2 := by
+    have : (Vector.mapAccumr₂ sum_bool (Vector.cons b (asVector x)) (Vector.cons (head y) (asVector (tail y))) false).2 =
+      Vector.cons (sum_bool b (head y) false).2 (Vector.mapAccumr₂ sum_bool (asVector x) (asVector (tail y)) (Prod.fst <| sum_bool b (head y) false)).2 := by
       match b, (head y) with
       | true, true =>
         rw [sum_bool]
@@ -538,7 +556,6 @@ theorem add_asVector :
           sorry
         rw [this]
         rw [ih]
-        simp [sum_bool]
 
 /- Sub_Asvector theorem-/
 def sub_bool (x y c : Bool) : Bool × Bool :=
@@ -552,7 +569,7 @@ theorem sub_cons {x y : Bool} {xs ys : BitVec n} :
 
 theorem sub_asVector :
     x - y = (ofVector <| Prod.snd <|
-      Vector.mapAccumr₂ (fun x y c => (sub_bool x y c)) x.asVector y.asVector false
+      Vector.mapAccumr₂ sub_bool x.asVector y.asVector false
     ) := by
   induction x using consRecursion
   case nil =>
@@ -564,8 +581,8 @@ theorem sub_asVector :
     simp only [asVector_cons]
     rw [cons_head_tail_eq y]
     simp only [sub_cons, asVector_cons]
-    have : (Vector.mapAccumr₂ (fun x y c => sub_bool x y c) (Vector.cons b (asVector x)) (Vector.cons (head y) (asVector (tail y))) false).2 =
-      Vector.cons (sub_bool b (head y) false).2 (Vector.mapAccumr₂ (fun x y c => sub_bool x y c) (asVector x) (asVector (tail y)) (Prod.fst <| sub_bool b (head y) false)).2 := by
+    have : (Vector.mapAccumr₂ sub_bool (Vector.cons b (asVector x)) (Vector.cons (head y) (asVector (tail y))) false).2 =
+      Vector.cons (sub_bool b (head y) false).2 (Vector.mapAccumr₂ sub_bool (asVector x) (asVector (tail y)) (Prod.fst <| sub_bool b (head y) false)).2 := by
       sorry
     rw [this]
     simp only [ofVector_cons]
@@ -595,7 +612,6 @@ theorem sub_asVector :
           sorry
         rw [this]
         rw [ih]
-        simp [sub_bool]
 
 /-
   TODO: `mul`, `div`, `mod`
