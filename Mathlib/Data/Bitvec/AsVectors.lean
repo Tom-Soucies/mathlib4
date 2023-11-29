@@ -19,10 +19,6 @@ universe u v
   ## Pseudo constructors
 -/
 
--- /-- The empty bitvector -/
--- def nil : BitVec 0 :=
---   BitVec.zero 0
-
 /-- There is only one `empty` bitvector, namely, `nil` -/
 theorem zero_length_eq_nil :
     ∀ (xs : BitVec 0), xs = nil := by
@@ -39,24 +35,6 @@ def head (xs : BitVec (n + 1)) : Bool :=
 
 def tail (xs : BitVec (n + 1)) : BitVec n :=
   BitVec.extractLsb' 1 n xs
-
--- /-- Prepend a single bit to the front of a bitvector. The new bit is the least significant bit -/
-theorem cons_as_math (x : Bool) (xs : BitVec n) :
-    cons x xs = BitVec.ofNat (n+1) (2 * BitVec.toNat xs + cond x 1 0) := by
-  simp only [cons]
-  sorry
-
-/- Todo : prove equivalence between this and getlsb (same thing for extractlsb) -/
-theorem head_as_math {n : Nat} (xs : BitVec (n + 1)) :
-    head xs = Bool.ofNat (BitVec.toNat xs % 2) := by
-  simp only [head]
-  sorry
-
-theorem tail_as_math {n : Nat} (xs : BitVec (n + 1)) :
-    tail xs = BitVec.ofNat n (Nat.div2 (BitVec.toNat xs)) := by
-  simp only [tail]
-  sorry
-
 
 /-!
   ## Induction principles
@@ -162,6 +140,23 @@ def asVector_eq {xs ys : BitVec n} :
 
 variable {m : Nat}
 
+/-- Prepend a single bit to the front of a bitvector. The new bit is the least significant bit -/
+theorem cons_as_math (x : Bool) (xs : BitVec n) :
+    cons x xs = BitVec.ofNat (n+1) (2 * BitVec.toNat xs + cond x 1 0) := by
+  simp only [cons]
+  sorry
+
+/- Todo : prove equivalence between this and getlsb (same thing for extractlsb) -/
+theorem head_as_math {n : Nat} (xs : BitVec (n + 1)) :
+    head xs = Bool.ofNat (BitVec.toNat xs % 2) := by
+  simp only [head]
+  sorry
+
+theorem tail_as_math {n : Nat} (xs : BitVec (n + 1)) :
+    tail xs = BitVec.ofNat n (Nat.div2 (BitVec.toNat xs)) := by
+  simp only [tail]
+  sorry
+
 lemma neq_succ {n p : Nat} (h : n < 2 ^ p) :
     2 * n + 1 < 2 ^ (p + 1) := by
   have : 2 * (n + 1) <= 2 * 2 ^ p := Nat.mul_le_mul_left 2 (Nat.succ_le_of_lt h)
@@ -215,7 +210,6 @@ theorem tail_cons {x : Bool} {xs : BitVec n} :
 theorem cons_head_tail_eq (x : BitVec (n + 1)) :
     x = cons (head x) (tail x) := by
   rw [<-asVector_eq]
-  simp only [asVector_cons]
   apply vectorEquiv.right_inv
 
 theorem head_tail_eq {xs ys : BitVec (n + 1)} :
@@ -262,7 +256,6 @@ theorem zero_asVector :
 theorem complement_cons {x : Bool} {xs : BitVec n} :
     ~~~cons x xs = cons (!x) (~~~xs) := by
   rw [<-asVector_eq]
-  simp only [asVector_cons]
   apply vectorEquiv.right_inv
 
 theorem complement_asVector {x : BitVec n} :
