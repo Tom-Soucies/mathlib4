@@ -130,7 +130,7 @@ def vectorEquiv {n : Nat} : BitVec n ≃ Vector Bool n where
     case _ _ ih =>
       simp [ofVector, asVector_cons, ofVector_cons, ih]
 
-def asVector_eq {xs ys : BitVec n} :
+theorem asVector_eq {xs ys : BitVec n} :
     asVector xs = asVector ys ↔ xs = ys := by
   apply Iff.intro (fun h => vectorEquiv.injective h) (congr_arg asVector)
 
@@ -276,7 +276,6 @@ theorem complement_asVector {x : BitVec n} :
 theorem shiftLeft_cons {x : Bool} {xs : BitVec n} :
     (cons x xs) <<< 1 = cons false (xs <<< 1) := by
   rw [<-asVector_eq]
-  simp only [asVector_cons]
   apply vectorEquiv.right_inv
 
 theorem shiftLeft_asVector {x : BitVec n} :
@@ -524,5 +523,28 @@ theorem sub_asVector :
   These operations cannot (easily) be defined in terms of `mapAccumr`.
   We could still formulate bitwise implementatoins, but the question is whether this is even useful
 -/
+
+/-- False theorem but proved -/
+theorem falsely {x : BitVec n} :
+    x = 0 ∧ x = 1 := by
+  rw [<-asVector_eq, <-asVector_eq]
+  apply And.intro <;> apply vectorEquiv.right_inv
+
+theorem falsy : False := by
+  have : (1 : BitVec (n + 1)) = 0 := falsely.left
+  have F : head (1 : BitVec (n + 1)) = head (0 : BitVec (n + 1)) := congr_arg head this
+  simp [head, getLsb] at F
+  have T : (1 % 2 ^ (n + 1) &&& 1 != 0) = true := by
+    have : 1 % 2 ^ (n + 1) = 1 := by
+      rw [Nat.mod_eq_of_lt]
+      simp [Nat.pow_succ]
+      have : 0 < 2 ^ n := by induction n <;> simp
+      have : 1 < 2 ^ n * 2 := Nat.mul_lt_mul' (Nat.succ_le_of_lt this) (Nat.le_refl 2) (this)
+      exact this
+    rw [this]
+    rfl
+  simp [T] at F
+
+#print falsy
 
 end BitVec
