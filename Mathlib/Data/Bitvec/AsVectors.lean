@@ -45,7 +45,7 @@ def tail (xs : BitVec (n + 1)) : BitVec n :=
 def consRecursion {motive : {n : Nat} → BitVec n → Sort u}
     (nil : motive nil)
     (ind : {n : Nat} → (x : Bool) → (xs : BitVec n) → motive xs → motive (cons x xs))
-    {n : Nat} (xs : BitVec n) : motive xs :=
+    {n : Nat} : ∀ xs : BitVec n, motive xs :=
   /-
     This one might be a bit hard to prove.
     For now, the `consRecursion_nil` and `consRecursion_cons` theorems fully specify how
@@ -103,10 +103,20 @@ def ofVector {n : Nat} : Vector Bool n → BitVec n :=
     | 0 => nil
     | Nat.succ _ => cons (Vector.head x) (ofVector <| Vector.tail x)
 
+/-- Distribution of vectorEquiv over head and tail -/
+theorem asVector_head {n : Nat} (xs : BitVec (n + 1)) :
+    head xs = Vector.head (asVector xs) := by
+  simp only [head, Vector.head, asVector]
+  sorry
+
+theorem asVector_tail {n : Nat} (xs : BitVec (n + 1)) :
+    asVector (tail xs) = Vector.tail (asVector xs) := by
+  sorry
+
 /-- Distribution of vectorEquiv over cons -/
 theorem asVector_cons {x : Bool} {xs : BitVec n} :
     asVector (cons x xs) = Vector.cons x (asVector xs) := by
-  simp only [asVector, ofVector, consRecursion_cons]
+  simp only [asVector, consRecursion_cons]
 
 theorem ofVector_cons {x : Bool} {xs : Vector Bool n} :
     ofVector (Vector.cons x xs) = cons x (ofVector xs) := by
@@ -152,11 +162,6 @@ theorem head_as_math {n : Nat} (xs : BitVec (n + 1)) :
   simp only [head]
   sorry
 
-theorem tail_as_math {n : Nat} (xs : BitVec (n + 1)) :
-    tail xs = BitVec.ofNat n (Nat.div2 (BitVec.toNat xs)) := by
-  simp only [tail]
-  sorry
-
 lemma neq_succ {n p : Nat} (h : n < 2 ^ p) :
     2 * n + 1 < 2 ^ (p + 1) := by
   have : 2 * (n + 1) <= 2 * 2 ^ p := Nat.mul_le_mul_left 2 (Nat.succ_le_of_lt h)
@@ -170,6 +175,12 @@ lemma neq_succ {n p : Nat} (h : n < 2 ^ p) :
 
 theorem head_cons {x : Bool} {xs : BitVec n} :
     head (cons x xs) = x := by
+  -- rw [<-asVector_eq]
+  -- simp [asVector_cons, asVector_head]
+  -- have {v : Vector Bool n} : Vector.head (Vector.cons x v) = x := by
+  --   simp only [Vector.head, Vector.cons]
+  --   rfl
+  -- rw [this]
   rw [cons_as_math, head_as_math]
   induction x
   case true =>
@@ -190,27 +201,17 @@ theorem head_cons {x : Bool} {xs : BitVec n} :
 
 theorem tail_cons {x : Bool} {xs : BitVec n} :
     tail (cons x xs) = xs := by
-  rw [cons_as_math, tail_as_math]
-  induction x
-  case true =>
-    simp only [cond]
-    rw [BitVec.toNat_ofNat]
-    . simp [Nat.div2_val, Nat.mul_comm]
-    . have : 2 * BitVec.toNat xs + 1 < 2 ^ (n + 1) := neq_succ xs.toFin.prop
-      exact this
-  case false =>
-    simp only [cond]
-    rw [BitVec.toNat_ofNat]
-    simp
-    . simp [Nat.div2_val, Nat.mul_comm]
-    . have : 2 * BitVec.toNat xs < 2 * 2 ^ n := Nat.mul_lt_mul' (Nat.le_refl 2) xs.toFin.prop (Nat.zero_lt_succ 1)
-      simp only [Nat.pow_succ, Nat.mul_comm (2 ^ n), Nat.add_zero]
-      exact this
+  rw [<-asVector_eq]
+  simp [asVector_cons, asVector_tail]
+  have {v : Vector Bool n} : Vector.tail (Vector.cons x v) = v := by
+    simp only [Vector.tail, Vector.cons]
+    rfl
+  rw [this]
 
 theorem cons_head_tail_eq (x : BitVec (n + 1)) :
     x = cons (head x) (tail x) := by
   rw [<-asVector_eq]
-  apply vectorEquiv.right_inv
+  simp [asVector_cons, asVector_head, asVector_tail]
 
 theorem head_tail_eq {xs ys : BitVec (n + 1)} :
     xs = ys ↔ head xs = head ys ∧ tail xs = tail ys := by
@@ -256,7 +257,7 @@ theorem zero_asVector :
 theorem complement_cons {x : Bool} {xs : BitVec n} :
     ~~~cons x xs = cons (!x) (~~~xs) := by
   rw [<-asVector_eq]
-  apply vectorEquiv.right_inv
+  sorry
 
 theorem complement_asVector {x : BitVec n} :
     (~~~x) = (ofVector <| Vector.map not x.asVector) := by
@@ -276,7 +277,7 @@ theorem complement_asVector {x : BitVec n} :
 theorem shiftLeft_cons {x : Bool} {xs : BitVec n} :
     (cons x xs) <<< 1 = cons false (xs <<< 1) := by
   rw [<-asVector_eq]
-  apply vectorEquiv.right_inv
+  sorry
 
 theorem shiftLeft_asVector {x : BitVec n} :
     (x <<< 1) = (ofVector <| Vector.map (fun _ => false) x.asVector) := by
@@ -293,8 +294,7 @@ variable {x y : BitVec n}
 theorem and_cons {x y : Bool} {xs ys : BitVec n} :
     (cons x xs) &&& (cons y ys) = cons (x && y) (xs &&& ys) := by
   rw [<-asVector_eq]
-  simp only [asVector_cons]
-  apply vectorEquiv.right_inv
+  sorry
 
 theorem and_asVector :
     (x &&& y) = (ofVector <| Vector.map₂ and x.asVector y.asVector) := by
@@ -317,8 +317,7 @@ theorem and_asVector :
 theorem or_cons {x y : Bool} {xs ys : BitVec n} :
     (cons x xs) ||| (cons y ys) = cons (x || y) (xs ||| ys) := by
   rw [<-asVector_eq]
-  simp only [asVector_cons]
-  apply vectorEquiv.right_inv
+  sorry
 
 theorem or_asVector :
     (x ||| y) = (ofVector <| Vector.map₂ or x.asVector y.asVector) := by
@@ -341,8 +340,7 @@ theorem or_asVector :
 theorem xor_cons {x y : Bool} {xs ys : BitVec n} :
     (cons x xs) ^^^ (cons y ys) = cons (xor x y) (xs ^^^ ys) := by
   rw [<-asVector_eq]
-  simp only [asVector_cons]
-  apply vectorEquiv.right_inv
+  sorry
 
 theorem xor_asVector :
     (x ^^^ y) = (ofVector <| Vector.map₂ xor x.asVector y.asVector) := by
@@ -398,8 +396,7 @@ def sum_bool (x y c : Bool) : Bool × Bool :=
 theorem add_cons {x y : Bool} {xs ys : BitVec n} :
     (cons x xs) + (cons y ys) = cons (Prod.snd (sum_bool x y false)) (adc xs ys (Prod.fst (sum_bool x y false))) := by
   rw [<-asVector_eq]
-  simp only [asVector_cons]
-  apply vectorEquiv.right_inv
+  sorry
 
 theorem add_asVector :
     x + y = (ofVector <| Prod.snd <|
@@ -469,8 +466,7 @@ def sub_bool (x y c : Bool) : Bool × Bool :=
 theorem sub_cons {x y : Bool} {xs ys : BitVec n} :
     (cons x xs) - (cons y ys) = cons (Prod.snd (sub_bool x y false)) (Prod.snd (sbb xs ys (Prod.fst (sub_bool x y false)))) := by
   rw [<-asVector_eq]
-  simp only [asVector_cons]
-  apply vectorEquiv.right_inv
+  sorry
 
 theorem sub_asVector :
     x - y = (ofVector <| Prod.snd <|
@@ -523,28 +519,5 @@ theorem sub_asVector :
   These operations cannot (easily) be defined in terms of `mapAccumr`.
   We could still formulate bitwise implementatoins, but the question is whether this is even useful
 -/
-
-/-- False theorem but proved -/
-theorem falsely {x : BitVec n} :
-    x = 0 ∧ x = 1 := by
-  rw [<-asVector_eq, <-asVector_eq]
-  apply And.intro <;> apply vectorEquiv.right_inv
-
-theorem falsy : False := by
-  have : (1 : BitVec (n + 1)) = 0 := falsely.left
-  have F : head (1 : BitVec (n + 1)) = head (0 : BitVec (n + 1)) := congr_arg head this
-  simp [head, getLsb] at F
-  have T : (1 % 2 ^ (n + 1) &&& 1 != 0) = true := by
-    have : 1 % 2 ^ (n + 1) = 1 := by
-      rw [Nat.mod_eq_of_lt]
-      simp [Nat.pow_succ]
-      have : 0 < 2 ^ n := by induction n <;> simp
-      have : 1 < 2 ^ n * 2 := Nat.mul_lt_mul' (Nat.succ_le_of_lt this) (Nat.le_refl 2) (this)
-      exact this
-    rw [this]
-    rfl
-  simp [T] at F
-
-#print falsy
 
 end BitVec
