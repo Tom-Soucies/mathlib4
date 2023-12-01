@@ -36,6 +36,10 @@ def head (xs : BitVec (n + 1)) : Bool :=
 def tail (xs : BitVec (n + 1)) : BitVec n :=
   BitVec.extractLsb' 1 n xs
 
+theorem cons_head_tail_eq (x : BitVec (n + 1)) :
+    x = cons (head x) (tail x) := by
+  sorry
+
 /-!
   ## Induction principles
 -/
@@ -53,15 +57,19 @@ def consRecursion {motive : {n : Nat} → BitVec n → Sort u}
     `consRecursion`
   -/
   fun xs => by
-    induction n
-    case zero =>
+    match n with
+    | 0 =>
       have : xs = .nil := by
         simp only [zero_length_eq_nil]
       rw [this]
       exact nil
-    case succ n ih =>
-      sorry
-
+    | Nat.succ n =>
+      let x := head xs
+      let xs' := tail xs
+      have : xs = cons x xs' := by
+        rw [<-cons_head_tail_eq]
+      rw [this]
+      exact ind x xs' (consRecursion nil ind xs')
 
 @[simp]
 theorem consRecursion_nil {motive nil ind} :
@@ -70,7 +78,7 @@ theorem consRecursion_nil {motive nil ind} :
 
 @[simp]
 theorem consRecursion_cons {motive nil ind} {x : Bool} {xs : BitVec n} :
-    consRecursion (motive:=motive) nil ind (.cons x xs)
+    consRecursion (motive:=motive) nil ind (cons x xs)
     = ind x xs (consRecursion nil ind xs) := by
   sorry
 
@@ -181,11 +189,6 @@ theorem tail_cons {x : Bool} {xs : BitVec n} :
     simp only [Vector.tail, Vector.cons]
     rfl
   rw [this]
-
-theorem cons_head_tail_eq (x : BitVec (n + 1)) :
-    x = cons (head x) (tail x) := by
-  rw [<-asVector_eq]
-  simp [asVector_cons, asVector_head, asVector_tail]
 
 theorem head_tail_eq {xs ys : BitVec (n + 1)} :
     xs = ys ↔ head xs = head ys ∧ tail xs = tail ys := by
