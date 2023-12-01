@@ -52,12 +52,21 @@ def consRecursion {motive : {n : Nat} → BitVec n → Sort u}
     `consRecursion` should behave, and it is enough to use those in proofs about definitions using
     `consRecursion`
   -/
-  sorry
+  fun xs => by
+    induction n
+    case zero =>
+      have : xs = .nil := by
+        simp only [zero_length_eq_nil]
+      rw [this]
+      exact nil
+    case succ n ih =>
+      sorry
+
 
 @[simp]
 theorem consRecursion_nil {motive nil ind} :
     consRecursion (motive:=motive) nil ind .nil = nil := by
-  sorry
+  rfl
 
 @[simp]
 theorem consRecursion_cons {motive nil ind} {x : Bool} {xs : BitVec n} :
@@ -201,7 +210,7 @@ theorem zero_asVector :
     (BitVec.zero m).asVector = Vector.replicate m false := by
   induction m
   case zero =>
-    apply vectorEquiv.right_inv
+    rfl
   case succ m ih =>
     have : asVector (BitVec.zero (Nat.succ m)) = Vector.cons false (asVector (BitVec.zero m)) := by
       have : BitVec.zero (Nat.succ m) = cons false (BitVec.zero m) := by
