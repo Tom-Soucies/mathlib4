@@ -38,7 +38,6 @@ def tail (xs : BitVec (n + 1)) : BitVec n :=
 
 theorem cons_head_tail_eq (x : BitVec (n + 1)) :
     x = cons (head x) (tail x) := by
-  simp [cons, head, tail, getMsb, extractLsb']
   sorry
 
 /-!
