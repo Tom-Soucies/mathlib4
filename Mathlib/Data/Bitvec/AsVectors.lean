@@ -31,13 +31,14 @@ theorem zero_length_eq_nil :
 
 /-- Get the head and tail of a BitVec (head being the least significant bit) -/
 def head (xs : BitVec (n + 1)) : Bool :=
-  BitVec.getLsb xs 0
+  BitVec.getMsb xs 0
 
 def tail (xs : BitVec (n + 1)) : BitVec n :=
-  BitVec.extractLsb' 1 n xs
+  BitVec.extractLsb' 0 n xs
 
 theorem cons_head_tail_eq (x : BitVec (n + 1)) :
     x = cons (head x) (tail x) := by
+  simp [cons, head, tail, getMsb, extractLsb']
   sorry
 
 /-!
@@ -124,12 +125,12 @@ def ofVector {n : Nat} : Vector Bool n → BitVec n :=
 theorem asVector_head {n : Nat} (xs : BitVec (n + 1)) :
     head xs = Vector.head (asVector xs) := by
   simp only [asVector, consRecursion_cons]
-  sorry
+  rfl
 
 theorem asVector_tail {n : Nat} (xs : BitVec (n + 1)) :
     asVector (tail xs) = Vector.tail (asVector xs) := by
   simp only [asVector, consRecursion]
-  sorry
+  rfl
 
 /-- Distribution of vectorEquiv over cons -/
 theorem asVector_cons {x : Bool} {xs : BitVec n} :
@@ -221,7 +222,8 @@ theorem zero_asVector :
         apply And.intro
         case left =>
           simp [head_cons]
-          simp [head, getLsb]
+          simp [head, getMsb]
+          rfl
         case right =>
           simp [tail_cons]
           simp [tail, extractLsb']
@@ -357,7 +359,7 @@ theorem lt_asVector :
   induction x using consRecursion
   case nil =>
     simp only [zero_length_eq_nil]
-    sorry
+    rfl
   case ind b x ih =>
     simp only [asVector_cons]
     rw [cons_head_tail_eq y]
@@ -392,23 +394,7 @@ theorem add_asVector :
     simp only [add_cons, asVector_cons]
     have : (Vector.mapAccumr₂ sum_bool (Vector.cons b (asVector x)) (Vector.cons (head y) (asVector (tail y))) false).2 =
       Vector.cons (sum_bool b (head y) false).2 (Vector.mapAccumr₂ sum_bool (asVector x) (asVector (tail y)) (Prod.fst <| sum_bool b (head y) false)).2 := by
-      match b, (head y) with
-      | true, true =>
-        rw [sum_bool]
-        simp
-        sorry
-      | false, true =>
-        rw [sum_bool]
-        simp
-        sorry
-      | true, false =>
-        rw [sum_bool]
-        simp
-        sorry
-      | false, false =>
-        rw [sum_bool]
-        simp
-        sorry
+      sorry
     rw [this]
     simp only [ofVector_cons]
     rw [head_tail_eq]
