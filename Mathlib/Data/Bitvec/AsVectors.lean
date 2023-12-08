@@ -29,16 +29,42 @@ theorem zero_length_eq_nil :
   simp only [nil, BitVec.zero, toNat_inj] at this
   simp only [this]
 
+/-- Two bitvectors are equal iff all their bits are equal 2 to 2 -/
+theorem bit_to_bit_eq {xs ys : BitVec n} :
+    xs = ys ↔ ∀ i : Nat, xs.getLsb i = ys.getLsb i := by
+  apply Iff.intro
+  case mp =>
+    intro h
+    simp [h]
+  case mpr =>
+    intro h
+    simp [BitVec.getLsb_eq_testBit] at h
+    have : xs.toNat = ys.toNat := Nat.eq_of_testBit_eq h
+    rw [toNat_inj] at this
+    exact this
+
 /-- Get the head and tail of a BitVec (head being the least significant bit) -/
 def head (xs : BitVec (n + 1)) : Bool :=
-  BitVec.getMsb xs 0
+  BitVec.getLsb xs (n + 1)
 
 def tail (xs : BitVec (n + 1)) : BitVec n :=
   BitVec.extractLsb' 0 n xs
 
-theorem cons_head_tail_eq (x : BitVec (n + 1)) :
+theorem cons_head_tail_eq {n : Nat} (x : BitVec (n + 1)) :
     x = cons (head x) (tail x) := by
-  sorry
+  rw [bit_to_bit_eq]
+  intro i
+  have : getLsb (cons (head x) (tail x)) i =
+    if i = (n + 1) then head x else getLsb (tail x) i := by
+    sorry -- theorem to pull: getLsb_cons
+  rw [this]
+  if h : i = (n + 1) then
+    rw [h]
+    simp [head]
+  else
+    rw [if_neg h]
+    simp [tail, extractLsb', getLsb_eq_testBit]
+    sorry
 
 /-!
   ## Induction principles
