@@ -65,6 +65,9 @@ def adc' {n} (x y : BitVec n) (c : Bool) : BitVec (n+1) :=
   let a := x.adc y c; .cons a.1 a.2
 #align bitvec.adc Std.BitVec.adc
 
+def adc'' {n} (x y : BitVec n) (c : Bool) : BitVec (n) :=
+  ofFin (x.toNat + y.toNat + c.toNat)
+
 #align bitvec.add Std.BitVec.add
 
 /-- Subtract with borrow -/

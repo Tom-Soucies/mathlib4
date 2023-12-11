@@ -38,32 +38,32 @@ theorem bit_to_bit_eq {xs ys : BitVec n} :
     simp [h]
   case mpr =>
     intro h
-    simp [BitVec.getLsb_eq_testBit] at h
+    simp [getLsb_eq_testBit] at h
     have : xs.toNat = ys.toNat := Nat.eq_of_testBit_eq h
     rw [toNat_inj] at this
     exact this
 
 /-- Get the head and tail of a BitVec (head being the least significant bit) -/
 def head (xs : BitVec (n + 1)) : Bool :=
-  BitVec.getLsb xs (n + 1)
+  getLsb xs n
 
 def tail (xs : BitVec (n + 1)) : BitVec n :=
-  BitVec.extractLsb' 0 n xs
+  extractLsb' 0 n xs
 
 theorem cons_head_tail_eq {n : Nat} (x : BitVec (n + 1)) :
     x = cons (head x) (tail x) := by
   rw [bit_to_bit_eq]
   intro i
   have : getLsb (cons (head x) (tail x)) i =
-    if i = (n + 1) then head x else getLsb (tail x) i := by
-    sorry -- theorem to pull: getLsb_cons
+    if i = n then head x else getLsb (tail x) i := by
+    simp [getLsb_cons]
   rw [this]
-  if h : i = (n + 1) then
+  if h : i = n then
     rw [h]
     simp [head]
   else
     rw [if_neg h]
-    simp [tail, extractLsb', BitVec.getLsb_eq_testBit]
+    simp [tail, extractLsb', getLsb_eq_testBit]
     sorry
 
 /-!
@@ -123,8 +123,8 @@ theorem consRecursion_cons {motive nil ind} {x : Bool} {xs : BitVec n} :
   However, they are also useful beyond proofs. A recursion principle can be used to define a
   structurally recursive function on bitvectors.
   That is, in `let f := consRecursion h_nil h_cons`, the `h_nil` argument gives the return value of
-  `f BitVec.nil`, while `h_cons` is a function that maps `x`, `xs` and `f xs` to the return value of
-  `f (BitVec.cons x xs)`
+  `f nil`, while `h_cons` is a function that maps `x`, `xs` and `f xs` to the return value of
+  `f (cons x xs)`
 -/
 
 /-!
@@ -248,7 +248,6 @@ theorem zero_asVector :
         case left =>
           simp [head_cons]
           simp [head, getMsb]
-          rfl
         case right =>
           simp [tail_cons]
           simp [tail, extractLsb']
@@ -400,7 +399,7 @@ def sum_bool (x y c : Bool) : Bool × Bool :=
   (or (and x y) (or (and x c) (and c y)), xor (xor x y) c)
 
 theorem add_cons {x y : Bool} {xs ys : BitVec n} :
-    (cons x xs) + (cons y ys) = cons (Prod.snd (sum_bool x y false)) (adc xs ys (Prod.fst (sum_bool x y false))) := by
+    (cons x xs) + (cons y ys) = cons (Prod.snd (sum_bool x y false)) (adc'' xs ys (Prod.fst (sum_bool x y false))) := by
   sorry
 
 theorem add_asVector :
@@ -431,18 +430,18 @@ theorem add_asVector :
       match b, (head y) with
       | true, true =>
         simp [sum_bool]
-        have : adc x (tail y) true = x + (tail y) + 1 := by
+        have : adc'' x (tail y) true = x + (tail y) + 1 := by
           simp [adc]
-          rw [<-BitVec.add_eq]
+          rw [<-add_eq]
           simp [BitVec.add]
           sorry
         rw [this, ih]
         sorry
       | false, _ | _, false =>
         simp [sum_bool]
-        have : adc x (tail y) false = x + (tail y) := by
-          simp [adc]
-          rw [<-BitVec.add_eq]
+        have : adc'' x (tail y) false = x + (tail y) := by
+          simp [adc'']
+          rw [<-add_eq]
           simp [BitVec.add]
           sorry
         rw [this]
@@ -486,7 +485,7 @@ theorem sub_asVector :
         simp [sub_bool]
         have : Prod.snd (sbb x (tail y) true) = x - (tail y) - 1 := by
           simp only [sbb]
-          rw [<-BitVec.sub_eq]
+          rw [<-sub_eq]
           simp [BitVec.sub]
           sorry
         rw [this]
@@ -496,7 +495,7 @@ theorem sub_asVector :
         simp [sub_bool]
         have : Prod.snd (sbb x (tail y) false) = x - (tail y) := by
           simp [sbb]
-          rw [<-BitVec.sub_eq]
+          rw [<-sub_eq]
           simp [BitVec.sub]
           sorry
         rw [this]

@@ -52,6 +52,9 @@ theorem toNat_extractLsb' {i j} {x : BitVec w} :
     (extractLsb' i j x).toNat = x.toNat / 2 ^ i % (2 ^ j) := by
   simp only [extractLsb', toNat_ofNat, shiftRight_eq_div_pow]
 
+theorem getLsb_eq_testBit {i} {x : BitVec w} : getLsb x i = x.toNat.testBit i := by
+  simp only [getLsb, Nat.shiftLeft_eq, one_mul, Nat.and_two_pow]
+
 theorem ofFin_val {n : ℕ} (i : Fin <| 2 ^ n) : (ofFin i).toNat = i.val :=
   rfl
 #align bitvec.of_fin_val Std.BitVec.ofFin_val
