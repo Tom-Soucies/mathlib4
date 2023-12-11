@@ -1,5 +1,5 @@
-import Mathlib.Data.Bitvec.Defs
-import Mathlib.Data.Bitvec.Lemmas
+import Mathlib.Data.BitVec.Defs
+import Mathlib.Data.BitVec.Lemmas
 import Mathlib.Data.Vector
 
 /-!
@@ -63,7 +63,7 @@ theorem cons_head_tail_eq {n : Nat} (x : BitVec (n + 1)) :
     simp [head]
   else
     rw [if_neg h]
-    simp [tail, extractLsb', getLsb_eq_testBit]
+    simp [tail, extractLsb', BitVec.getLsb_eq_testBit]
     sorry
 
 /-!

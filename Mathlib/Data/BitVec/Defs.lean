@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2023 Wojciech Nawrocki. All rights reserved.
+Copyright (c) 2015 Joe Hendrix. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Harun Khan, Alex Keizer, Abdalrhman M Mohamed
+Authors: Joe Hendrix, Sebastian Ullrich, Harun Khan, Alex Keizer, Abdalrhman M Mohamed
 -/
 
 import Mathlib.Data.Fin.Basic
@@ -58,9 +58,11 @@ namespace Std.BitVec
 /-! ### Arithmetic operators -/
 
 #align bitvec.neg Std.BitVec.neg
-/-- Add with carry (no overflow) -/
-def adc {n} (x y : BitVec n) (c : Bool) : BitVec (n) :=
-  ofFin (x.toNat + y.toNat + c.toNat)
+/-- Add with carry (no overflow)
+
+See also `Std.BitVec.adc`, which stores the carry bit separately. -/
+def adc' {n} (x y : BitVec n) (c : Bool) : BitVec (n+1) :=
+  let a := x.adc y c; .cons a.1 a.2
 #align bitvec.adc Std.BitVec.adc
 
 #align bitvec.add Std.BitVec.add
