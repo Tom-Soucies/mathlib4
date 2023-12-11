@@ -64,7 +64,22 @@ theorem cons_head_tail_eq {n : Nat} (x : BitVec (n + 1)) :
   else
     rw [if_neg h]
     simp [tail, extractLsb', getLsb_eq_testBit]
-    sorry
+    rw [Nat.testBit_mod_two_pow]
+    have prop : x.toNat < 2 ^ (n + 1) := x.toFin.prop
+    if h' : i > n then
+      have h_lt : 2 ^ (n + 1) ≤ 2 ^ i := by
+        have : n + 1 ≤ i := by
+          rw [Nat.succ_le_iff]
+          exact h'
+        exact Nat.pow_le_pow_of_le_right (Nat.zero_lt_succ _) this
+      have : x.toNat.testBit i = false := by
+        rw [Nat.testBit_lt_two]
+        simp only [Nat.lt_of_lt_of_le (prop) h_lt]
+      simp [this]
+    else
+      have : i <= n := Nat.le_of_not_lt h'
+      have : i < n := Nat.lt_of_le_of_ne this h
+      simp [this]
 
 /-!
   ## Induction principles
@@ -247,7 +262,7 @@ theorem zero_asVector :
         apply And.intro
         case left =>
           simp [head_cons]
-          simp [head, getMsb]
+          simp [head, getLsb]
         case right =>
           simp [tail_cons]
           simp [tail, extractLsb']
