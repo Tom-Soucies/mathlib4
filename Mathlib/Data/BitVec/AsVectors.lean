@@ -105,12 +105,10 @@ def consRecursion {motive : {n : Nat} → BitVec n → Sort u}
       rw [this]
       exact nil
     | Nat.succ n =>
-      let x := head xs
-      let xs' := tail xs
-      have : xs = cons x xs' := by
+      have : xs = cons (head xs) (tail xs) := by
         rw [<-cons_head_tail_eq]
       rw [this]
-      exact ind x xs' (consRecursion nil ind xs')
+      exact ind (head xs) (tail xs) (consRecursion nil ind (tail xs))
 
 @[simp]
 theorem consRecursion_nil {motive nil ind} :
@@ -121,6 +119,8 @@ theorem consRecursion_nil {motive nil ind} :
 theorem consRecursion_cons {motive nil ind} {x : Bool} {xs : BitVec n} :
     consRecursion (motive:=motive) nil ind (cons x xs)
     = ind x xs (consRecursion nil ind xs) := by
+  simp only [consRecursion]
+  simp only [Eq.mpr]
   sorry
 
 /-
@@ -391,6 +391,10 @@ theorem xor_asVector :
 def lt_bool (x y c : Bool) : Bool × Bool :=
   ((!x && y) || (x == y && c), false)
 
+def lt_cons {x y : Bool} {xs ys : BitVec n} :
+    BitVec.ult (cons x xs) (cons y ys) = ((!x && y) || (x == y && (BitVec.ult xs ys))) := by
+  sorry
+
 theorem lt_asVector :
     BitVec.ult x y = (Prod.fst <|
       Vector.mapAccumr₂ lt_bool (asVector x) (asVector y) false
@@ -402,8 +406,12 @@ theorem lt_asVector :
   case ind b x ih =>
     simp only [asVector_cons]
     rw [cons_head_tail_eq y]
-    simp only [asVector_cons]
-    sorry
+    simp only [lt_cons, asVector_cons]
+    rw [ih]
+    have : (Vector.mapAccumr₂ lt_bool (Vector.cons b (asVector x)) (Vector.cons (head y) (asVector (tail y))) false).1 =
+      ((!b && head y) || (b == (head y) && (Vector.mapAccumr₂ lt_bool (asVector x) (asVector (tail y)) false).1)) := by
+      rfl
+    rw [this]
 
 /-!
   ## Arithmetic
