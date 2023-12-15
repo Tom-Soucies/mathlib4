@@ -389,7 +389,7 @@ theorem xor_asVector :
 
 /- Lt_AsVector theorem -/
 def lt_bool (x y c : Bool) : Bool × Bool :=
-  ((!x && y) || (x == y && c), false)
+  ((!x && y) || (x == y && c), (x == y && c))
 
 def lt_cons {x y : Bool} {xs ys : BitVec n} :
     BitVec.ult (cons x xs) (cons y ys) = ((!x && y) || (x == y && (BitVec.ult xs ys))) := by
@@ -410,6 +410,32 @@ theorem lt_asVector :
     rw [ih]
     have : (Vector.mapAccumr₂ lt_bool (Vector.cons b (asVector x)) (Vector.cons (head y) (asVector (tail y))) false).1 =
       ((!b && head y) || (b == (head y) && (Vector.mapAccumr₂ lt_bool (asVector x) (asVector (tail y)) false).1)) := by
+      rfl
+    rw [this]
+
+/- Le_AsVector theorem -/
+def le_bool (x y c : Bool) : Bool × Bool :=
+  ((!x && y) || (x == y && c), x == y && c)
+
+def le_cons {x y : Bool} {xs ys : BitVec n} :
+    BitVec.ule (cons x xs) (cons y ys) = ((!x && y) || (x == y && (BitVec.ule xs ys))) := by
+  sorry
+
+theorem le_asVector :
+    BitVec.ule x y = (Prod.fst <|
+      Vector.mapAccumr₂ le_bool (asVector x) (asVector y) true
+    ) := by
+  induction x using consRecursion
+  case nil =>
+    simp only [zero_length_eq_nil]
+    rfl
+  case ind b x ih =>
+    simp only [asVector_cons]
+    rw [cons_head_tail_eq y]
+    simp only [le_cons, asVector_cons]
+    rw [ih]
+    have : (Vector.mapAccumr₂ le_bool (Vector.cons b (asVector x)) (Vector.cons (head y) (asVector (tail y))) true).1 =
+      ((!b && head y) || (b == (head y) && (Vector.mapAccumr₂ le_bool (asVector x) (asVector (tail y)) true).1)) := by
       rfl
     rw [this]
 
