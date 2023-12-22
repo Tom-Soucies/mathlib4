@@ -81,6 +81,15 @@ theorem cons_head_tail_eq {n : Nat} (x : BitVec (n + 1)) :
       have : i < n := Nat.lt_of_le_of_ne this h
       simp [this]
 
+theorem head_cons (x : Bool) (xs : BitVec n) :
+    head (cons x xs) = x := by
+  simp [head, getLsb_cons]
+
+theorem tail_cons {x : Bool} {xs : BitVec n} :
+    tail (cons x xs) = xs := by
+  simp [tail, extractLsb', cons]
+  sorry
+
 /-!
   ## Induction principles
 -/
@@ -105,9 +114,7 @@ def consRecursion {motive : {n : Nat} → BitVec n → Sort u}
       rw [this]
       exact nil
     | Nat.succ n =>
-      have : xs = cons (head xs) (tail xs) := by
-        rw [<-cons_head_tail_eq]
-      rw [this]
+      rw [cons_head_tail_eq xs]
       exact ind (head xs) (tail xs) (consRecursion nil ind (tail xs))
 
 @[simp]
@@ -119,9 +126,11 @@ theorem consRecursion_nil {motive nil ind} :
 theorem consRecursion_cons {motive nil ind} {x : Bool} {xs : BitVec n} :
     consRecursion (motive:=motive) nil ind (cons x xs)
     = ind x xs (consRecursion nil ind xs) := by
+  apply eq_of_heq
   simp only [consRecursion]
   simp only [Eq.mpr]
-  sorry
+  apply HEq.trans (eqRec_heq' _ _)
+  rw [head_cons, tail_cons]
 
 /-
   `consRecursion` is a so-called custom recursion principle, which allows us to pretend that
@@ -216,20 +225,6 @@ theorem ofasVector_eq {xs : BitVec n} :
 -/
 
 variable {m : Nat}
-
-theorem head_cons {x : Bool} {xs : BitVec n} :
-    head (cons x xs) = x := by
-  simp only [asVector_cons, asVector_head]
-  rfl
-
-theorem tail_cons {x : Bool} {xs : BitVec n} :
-    tail (cons x xs) = xs := by
-  rw [<-asVector_eq]
-  simp [asVector_cons, asVector_tail]
-  have {v : Vector Bool n} : Vector.tail (Vector.cons x v) = v := by
-    simp only [Vector.tail, Vector.cons]
-    rfl
-  rw [this]
 
 theorem head_tail_eq {xs ys : BitVec (n + 1)} :
     xs = ys ↔ head xs = head ys ∧ tail xs = tail ys := by
