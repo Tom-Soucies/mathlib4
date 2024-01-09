@@ -77,8 +77,7 @@ theorem cons_head_tail_eq {n : Nat} (x : BitVec (n + 1)) :
         simp only [Nat.lt_of_lt_of_le (prop) h_lt]
       simp [this]
     else
-      have : i <= n := Nat.le_of_not_lt h'
-      have : i < n := Nat.lt_of_le_of_ne this h
+      have : i < n := Nat.lt_of_le_of_ne (Nat.le_of_not_lt h') h
       simp [this]
 
 theorem head_cons (x : Bool) (xs : BitVec n) :
@@ -87,8 +86,19 @@ theorem head_cons (x : Bool) (xs : BitVec n) :
 
 theorem tail_cons {x : Bool} {xs : BitVec n} :
     tail (cons x xs) = xs := by
-  simp [tail, extractLsb', cons]
-  sorry
+  simp [tail, extractLsb', bit_to_bit_eq]
+  intro i
+  simp [getLsb_eq_testBit, Nat.testBit_mod_two_pow]
+  have prop : xs.toNat < 2 ^ n := xs.toFin.prop
+  if h : i ≥ n then
+    simp [Nat.not_lt_of_ge h]
+    have h_lt : 2 ^ n ≤ 2 ^ i := by
+      exact Nat.pow_le_pow_of_le_right (Nat.zero_lt_succ _) h
+    simp only [Nat.testBit_lt_two, Nat.lt_of_lt_of_le (prop) h_lt]
+  else
+    have h' : i < n := Nat.lt_of_not_ge h
+    simp [Nat.testBit_lt_two, h']
+    sorry
 
 /-!
   ## Induction principles
