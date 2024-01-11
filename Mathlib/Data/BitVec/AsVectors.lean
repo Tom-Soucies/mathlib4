@@ -84,6 +84,12 @@ theorem head_cons (x : Bool) (xs : BitVec n) :
     head (cons x xs) = x := by
   simp [head, getLsb_cons]
 
+theorem small_getLsb (i : Nat) (x : Bool) (xs : BitVec n) (h : i < n) :
+    getLsb (cons x xs) i = getLsb xs i := by
+  rw [getLsb_cons]
+  have : ¬i = n := by simp [Nat.ne_of_lt h]
+  simp [this]
+
 theorem tail_cons {x : Bool} {xs : BitVec n} :
     tail (cons x xs) = xs := by
   simp [tail, extractLsb', bit_to_bit_eq]
@@ -98,7 +104,7 @@ theorem tail_cons {x : Bool} {xs : BitVec n} :
   else
     have h' : i < n := Nat.lt_of_not_ge h
     simp [Nat.testBit_lt_two, h']
-    sorry
+    rw [<-getLsb_eq_testBit, <-getLsb_eq_testBit, small_getLsb i x xs h']
 
 /-!
   ## Induction principles
