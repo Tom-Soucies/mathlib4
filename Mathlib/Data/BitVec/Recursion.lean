@@ -38,7 +38,7 @@ theorem bit_to_bit_eq {xs ys : BitVec n} :
     simp [h]
   case mpr =>
     intro h
-    simp [getLsb_eq_testBit] at h
+    simp [eq_of_getLsb_eq] at h
     have : xs.toNat = ys.toNat := Nat.eq_of_testBit_eq h
     rw [toNat_inj] at this
     exact this
@@ -54,29 +54,25 @@ theorem cons_head_tail_eq {n : Nat} (x : BitVec (n + 1)) :
     x = cons (head x) (tail x) := by
   rw [bit_to_bit_eq]
   intro i
-  have : getLsb (cons (head x) (tail x)) i =
-    if i = n then head x else getLsb (tail x) i := by
-    simp [getLsb_cons]
-  rw [this]
+  rw [getLsb_cons]
   if h : i = n then
     rw [h]
     simp [head]
   else
     rw [if_neg h]
-    simp [tail, extractLsb', getLsb_eq_testBit, Nat.testBit_mod_two_pow]
-    have prop : x.toNat < 2 ^ (n + 1) := x.toFin.prop
-    if h' : i > n then
-      have h_lt : 2 ^ (n + 1) ≤ 2 ^ i := by
-        have : n + 1 ≤ i := by
-          rw [Nat.succ_le_iff]
-          exact h'
-        exact Nat.pow_le_pow_of_le_right (Nat.zero_lt_succ _) this
-      have : x.toNat.testBit i = false := by
-        simp only [Nat.testBit_lt_two, Nat.lt_of_lt_of_le (prop) h_lt]
-      simp [this]
+    simp [tail, extractLsb']
+    if h' : i < n then
+      simp [h']
     else
-      have : i < n := Nat.lt_of_le_of_ne (Nat.le_of_not_lt h') h
-      simp [this]
+      simp [h']
+      have : i >= n + 1 := by
+        have : n <= i := by simp [Nat.ge_of_not_lt h']
+        have hrefl : ¬n = i := by
+          intro hr'
+          apply h
+          exact Eq.symm hr'
+        exact Nat.succ_le_of_lt (Nat.lt_of_le_of_ne this hrefl)
+      rw [getLsb_ge x i (this)]
 
 theorem head_cons (x : Bool) (xs : BitVec n) :
     head (cons x xs) = x := by
@@ -84,21 +80,17 @@ theorem head_cons (x : Bool) (xs : BitVec n) :
 
 theorem tail_cons {x : Bool} {xs : BitVec n} :
     tail (cons x xs) = xs := by
-  simp [tail, extractLsb', bit_to_bit_eq]
+  simp [tail]
+  simp [extractLsb']
+  simp [bit_to_bit_eq]
   intro i
-  simp [getLsb_eq_testBit, Nat.testBit_mod_two_pow]
-  have prop : xs.toNat < 2 ^ n := xs.toFin.prop
   if h : i ≥ n then
+    rw [getLsb_ge xs i h]
     simp [Nat.not_lt_of_ge h]
-    have h_lt : 2 ^ n ≤ 2 ^ i := by
-      exact Nat.pow_le_pow_of_le_right (Nat.zero_lt_succ _) h
-    simp only [Nat.testBit_lt_two, Nat.lt_of_lt_of_le (prop) h_lt]
   else
     have h' : i < n := Nat.lt_of_not_ge h
-    simp [Nat.testBit_lt_two, h']
-    rw [<-getLsb_eq_testBit, <-getLsb_eq_testBit, getLsb_cons]
-    have : ¬i = n := by simp [Nat.ne_of_lt h']
-    simp [this]
+    simp [h, h']
+    simp [getLsb]
 
 /-!
   ## Induction principles
@@ -172,7 +164,7 @@ theorem head_tail_eq {xs ys : BitVec (n + 1)} :
     have H : head xs = head ys := h.left
     have T : tail xs = tail ys := h.right
     have : xs = cons (head ys) (tail ys) := by
-      rw [←T, ←H]
+      rw [<-T, <-H]
       exact cons_head_tail_eq xs
     rw [this, ←cons_head_tail_eq]
 
