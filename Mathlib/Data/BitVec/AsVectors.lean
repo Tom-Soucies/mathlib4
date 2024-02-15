@@ -13,7 +13,7 @@ import Mathlib.Data.Vector
 
 namespace Std.BitVec
 
-variable {n : Nat}
+variable {n m : Nat}
 universe u v
 
 /-!
@@ -283,111 +283,111 @@ theorem le_asVector :
 -/
 
 /- Add_AsVector theorem -/
-def sum_bool (x y c : Bool) : Bool × Bool :=
-  (or (and x y) (or (and x c) (and c y)), xor (xor x y) c)
+-- def sum_bool (x y c : Bool) : Bool × Bool :=
+--   (or (and x y) (or (and x c) (and c y)), xor (xor x y) c)
 
-theorem add_cons {x y : Bool} {xs ys : BitVec n} :
-    (cons x xs) + (cons y ys) = cons (Prod.snd (sum_bool x y false)) (adc'' xs ys (Prod.fst (sum_bool x y false))) := by
-  sorry
+-- theorem add_cons {x y : Bool} {xs ys : BitVec n} :
+--     (cons x xs) + (cons y ys) = cons (Prod.snd (sum_bool x y false)) (adc'' xs ys (Prod.fst (sum_bool x y false))) := by
+--   sorry
 
-theorem add_asVector :
-    x + y = (ofVector <| Prod.snd <|
-      Vector.mapAccumr₂ sum_bool (asVector x) (asVector y) false
-    ) := by
-  induction x using consRecursion
-  case nil =>
-    simp only [ofVector, asVector, Vector.eq_nil]
-    have : y = nil := by simp only [zero_length_eq_nil]
-    rw [this]
-    rfl
-  case ind b x ih =>
-    simp only [asVector_cons]
-    rw [cons_head_tail_eq y]
-    simp only [add_cons, asVector_cons]
-    have : (Vector.mapAccumr₂ sum_bool (Vector.cons b (asVector x)) (Vector.cons (head y) (asVector (tail y))) false).2 =
-      Vector.cons (sum_bool b (head y) false).2 (Vector.mapAccumr₂ sum_bool (asVector x) (asVector (tail y)) (Prod.fst <| sum_bool b (head y) false)).2 := by
-      sorry
-    rw [this]
-    simp only [ofVector_cons]
-    rw [head_tail_eq]
-    apply And.intro
-    case left =>
-      rw [head_cons, head_cons]
-    case right =>
-      rw [tail_cons, tail_cons]
-      match b, (head y) with
-      | true, true =>
-        simp [sum_bool]
-        have : adc'' x (tail y) true = x + (tail y) + 1 := by
-          simp [adc]
-          rw [<-add_eq]
-          simp [BitVec.add]
-          sorry
-        rw [this, ih]
-        sorry
-      | false, _ | _, false =>
-        simp [sum_bool]
-        have : adc'' x (tail y) false = x + (tail y) := by
-          simp [adc'']
-          rw [<-add_eq]
-          simp [BitVec.add]
-          sorry
-        rw [this]
-        rw [ih]
+-- theorem add_asVector :
+--     x + y = (ofVector <| Prod.snd <|
+--       Vector.mapAccumr₂ sum_bool (asVector x) (asVector y) false
+--     ) := by
+--   induction x using consRecursion
+--   case nil =>
+--     simp only [ofVector, asVector, Vector.eq_nil]
+--     have : y = nil := by simp only [zero_length_eq_nil]
+--     rw [this]
+--     rfl
+--   case ind b x ih =>
+--     simp only [asVector_cons]
+--     rw [cons_head_tail_eq y]
+--     simp only [add_cons, asVector_cons]
+--     have : (Vector.mapAccumr₂ sum_bool (Vector.cons b (asVector x)) (Vector.cons (head y) (asVector (tail y))) false).2 =
+--       Vector.cons (sum_bool b (head y) false).2 (Vector.mapAccumr₂ sum_bool (asVector x) (asVector (tail y)) (Prod.fst <| sum_bool b (head y) false)).2 := by
+--       sorry
+--     rw [this]
+--     simp only [ofVector_cons]
+--     rw [head_tail_eq]
+--     apply And.intro
+--     case left =>
+--       rw [head_cons, head_cons]
+--     case right =>
+--       rw [tail_cons, tail_cons]
+--       match b, (head y) with
+--       | true, true =>
+--         simp [sum_bool]
+--         have : adc'' x (tail y) true = x + (tail y) + 1 := by
+--           simp [adc]
+--           rw [<-add_eq]
+--           simp [BitVec.add]
+--           sorry
+--         rw [this, ih]
+--         sorry
+--       | false, _ | _, false =>
+--         simp [sum_bool]
+--         have : adc'' x (tail y) false = x + (tail y) := by
+--           simp [adc'']
+--           rw [<-add_eq]
+--           simp [BitVec.add]
+--           sorry
+--         rw [this]
+--         rw [ih]
 
-/- Sub_Asvector theorem-/
-def sub_bool (x y c : Bool) : Bool × Bool :=
-  (or (and (not x) y) (and (not x) c), xor (xor (not x) y) c)
+-- /- Sub_Asvector theorem-/
+-- def sub_bool (x y c : Bool) : Bool × Bool :=
+--   (or (and (not x) y) (and (not x) c), xor (xor (not x) y) c)
 
-theorem sub_cons {x y : Bool} {xs ys : BitVec n} :
-    (cons x xs) - (cons y ys) = cons (Prod.snd (sub_bool x y false)) (Prod.snd (sbb xs ys (Prod.fst (sub_bool x y false)))) := by
-  sorry
+-- theorem sub_cons {x y : Bool} {xs ys : BitVec n} :
+--     (cons x xs) - (cons y ys) = cons (Prod.snd (sub_bool x y false)) (Prod.snd (sbb xs ys (Prod.fst (sub_bool x y false)))) := by
+--   sorry
 
-theorem sub_asVector :
-    x - y = (ofVector <| Prod.snd <|
-      Vector.mapAccumr₂ sub_bool x.asVector y.asVector false
-    ) := by
-  induction x using consRecursion
-  case nil =>
-    simp only [ofVector, asVector, Vector.eq_nil]
-    have : y = nil := by simp only [zero_length_eq_nil]
-    rw [this]
-    rfl
-  case ind b x ih =>
-    simp only [asVector_cons]
-    rw [cons_head_tail_eq y]
-    simp only [sub_cons, asVector_cons]
-    have : (Vector.mapAccumr₂ sub_bool (Vector.cons b (asVector x)) (Vector.cons (head y) (asVector (tail y))) false).2 =
-      Vector.cons (sub_bool b (head y) false).2 (Vector.mapAccumr₂ sub_bool (asVector x) (asVector (tail y)) (Prod.fst <| sub_bool b (head y) false)).2 := by
-      sorry
-    rw [this]
-    simp only [ofVector_cons]
-    rw [head_tail_eq]
-    apply And.intro
-    case left =>
-      rw [head_cons, head_cons]
-    case right =>
-      rw [tail_cons, tail_cons]
-      match b, (head y) with
-      | false, true =>
-        simp [sub_bool]
-        have : Prod.snd (sbb x (tail y) true) = x - (tail y) - 1 := by
-          simp only [sbb]
-          rw [<-sub_eq]
-          simp [BitVec.sub]
-          sorry
-        rw [this]
-        rw [ih]
-        sorry
-      | true, _ | _, false =>
-        simp [sub_bool]
-        have : Prod.snd (sbb x (tail y) false) = x - (tail y) := by
-          simp [sbb]
-          rw [<-sub_eq]
-          simp [BitVec.sub]
-          sorry
-        rw [this]
-        rw [ih]
+-- theorem sub_asVector :
+--     x - y = (ofVector <| Prod.snd <|
+--       Vector.mapAccumr₂ sub_bool x.asVector y.asVector false
+--     ) := by
+--   induction x using consRecursion
+--   case nil =>
+--     simp only [ofVector, asVector, Vector.eq_nil]
+--     have : y = nil := by simp only [zero_length_eq_nil]
+--     rw [this]
+--     rfl
+--   case ind b x ih =>
+--     simp only [asVector_cons]
+--     rw [cons_head_tail_eq y]
+--     simp only [sub_cons, asVector_cons]
+--     have : (Vector.mapAccumr₂ sub_bool (Vector.cons b (asVector x)) (Vector.cons (head y) (asVector (tail y))) false).2 =
+--       Vector.cons (sub_bool b (head y) false).2 (Vector.mapAccumr₂ sub_bool (asVector x) (asVector (tail y)) (Prod.fst <| sub_bool b (head y) false)).2 := by
+--       sorry
+--     rw [this]
+--     simp only [ofVector_cons]
+--     rw [head_tail_eq]
+--     apply And.intro
+--     case left =>
+--       rw [head_cons, head_cons]
+--     case right =>
+--       rw [tail_cons, tail_cons]
+--       match b, (head y) with
+--       | false, true =>
+--         simp [sub_bool]
+--         have : Prod.snd (sbb x (tail y) true) = x - (tail y) - 1 := by
+--           simp only [sbb]
+--           rw [<-sub_eq]
+--           simp [BitVec.sub]
+--           sorry
+--         rw [this]
+--         rw [ih]
+--         sorry
+--       | true, _ | _, false =>
+--         simp [sub_bool]
+--         have : Prod.snd (sbb x (tail y) false) = x - (tail y) := by
+--           simp [sbb]
+--           rw [<-sub_eq]
+--           simp [BitVec.sub]
+--           sorry
+--         rw [this]
+--         rw [ih]
 
 /-
   TODO: `mul`, `div`, `mod`
