@@ -13,7 +13,7 @@ import Mathlib.Data.Vector
 namespace Std.BitVec
 
 variable {n : Nat}
-universe u v
+universe u
 
 /-
   ## Pseudo constructors
@@ -26,47 +26,42 @@ theorem zero_length_eq_nil :
   have : xs.toNat < 2 ^ 0 := xs.toFin.prop
   simp only [Nat.pow_zero, Nat.lt_one_iff] at this
   have : xs.toNat = nil.toNat := this
-  simp only [nil, BitVec.zero, toNat_inj] at this
+  simp only [nil, toNat_inj] at this
   simp only [this]
 
-/-- Two bitvectors are equal iff all their bits are two by two equal -/
+/-- Two bitvectors are equal iff all their "bits" are two by two equal -/
 theorem bit_to_bit_eq {xs ys : BitVec n} :
     xs = ys ↔ ∀ i : Nat, xs.getLsb i = ys.getLsb i := by
-  apply Iff.intro
+  apply Iff.intro <;> intro h
   case mp =>
-    intro h
-    simp [h]
+    simp only [h, implies_true]
   case mpr =>
-    intro h
-    simp [eq_of_getLsb_eq] at h
     have : xs.toNat = ys.toNat := Nat.eq_of_testBit_eq h
-    rw [toNat_inj] at this
-    exact this
+    simp only [<-toNat_inj, this]
 
-/-- Get the head and tail of a BitVec (head being the least significant bit) -/
+/-- Get the `head` and `tail` of a bitvector (head being the least significant bit) -/
 def head (xs : BitVec (n + 1)) : Bool :=
   getLsb xs n
 
 def tail (xs : BitVec (n + 1)) : BitVec n :=
   extractLsb' 0 n xs
 
+/-- A bitvector is the `cons` of its `head` and its `tail` --/
 theorem cons_head_tail_eq {n : Nat} (x : BitVec (n + 1)) :
     x = cons (head x) (tail x) := by
   rw [bit_to_bit_eq]
   intro i
   rw [getLsb_cons]
   if h : i = n then
-    rw [h]
-    simp [head]
+    simp only [h, head, if_true]
   else
-    rw [if_neg h]
-    simp [tail, extractLsb']
+    simp only [h, tail, extractLsb', if_false, Nat.shiftRight_zero, ofNat_toNat, getLsb_truncate]
     if h' : i < n then
-      simp [h']
+      simp only [h', decide_True, Bool.true_and]
     else
-      simp [h']
+      simp only [h', decide_False, Bool.false_and]
       have : i >= n + 1 := by
-        have : n <= i := by simp [Nat.ge_of_not_lt h']
+        have : n <= i := by simp only [Nat.ge_of_not_lt h']
         have hrefl : ¬n = i := by
           intro hr'
           apply h
@@ -76,21 +71,18 @@ theorem cons_head_tail_eq {n : Nat} (x : BitVec (n + 1)) :
 
 theorem head_cons (x : Bool) (xs : BitVec n) :
     head (cons x xs) = x := by
-  simp [head, getLsb_cons]
+  simp only [head, getLsb_cons, if_true]
 
 theorem tail_cons {x : Bool} {xs : BitVec n} :
     tail (cons x xs) = xs := by
-  simp [tail]
-  simp [extractLsb']
-  simp [bit_to_bit_eq]
+  simp only [tail, extractLsb', bit_to_bit_eq]
   intro i
-  if h : i ≥ n then
-    rw [getLsb_ge xs i h]
-    simp [Nat.not_lt_of_ge h]
+  if h : i >= n then
+    simp only [toNat_cons, Nat.shiftRight_zero, ge_iff_le, h, getLsb_ge]
   else
-    have h' : i < n := Nat.lt_of_not_ge h
-    simp [h, h']
-    simp [getLsb]
+    simp only [getLsb, toNat_cons, Nat.shiftRight_zero, toNat_ofNat, Nat.testBit_mod_two_pow,
+      Nat.lt_of_not_ge h, decide_True, Nat.testBit_or, Nat.testBit_shiftLeft, ge_iff_le, h,
+      decide_False, Bool.false_and, Bool.false_or, Bool.true_and]
 
 /-!
   ## Induction principles
@@ -123,8 +115,7 @@ theorem consRecursion_cons {motive nil ind} {x : Bool} {xs : BitVec n} :
     consRecursion (motive:=motive) nil ind (cons x xs)
     = ind x xs (consRecursion nil ind xs) := by
   apply eq_of_heq
-  simp only [consRecursion]
-  simp only [Eq.mpr]
+  simp only [consRecursion, Eq.mpr]
   apply HEq.trans (eqRec_heq' _ _)
   rw [head_cons, tail_cons]
 
@@ -147,25 +138,16 @@ theorem consRecursion_cons {motive nil ind} {x : Bool} {xs : BitVec n} :
   `f (cons x xs)`
 -/
 
-/-!
-  ## Properties over `cons`
--/
-
-variable {m : Nat}
-
+/-- Two bitvectors are equal if their heads and tails are equal --/
 theorem head_tail_eq {xs ys : BitVec (n + 1)} :
-    xs = ys ↔ head xs = head ys ∧ tail xs = tail ys := by
-  apply Iff.intro
+    xs = ys <-> head xs = head ys ∧ tail xs = tail ys := by
+  apply Iff.intro <;> intro h
   case mp =>
-    intro h
-    simp [h]
+    simp only [h, and_self]
   case mpr =>
-    intro h
-    have H : head xs = head ys := h.left
-    have T : tail xs = tail ys := h.right
     have : xs = cons (head ys) (tail ys) := by
-      rw [<-T, <-H]
+      rw [<-h.left, <-h.right]
       exact cons_head_tail_eq xs
-    rw [this, ←cons_head_tail_eq]
+    rw [this, <-cons_head_tail_eq]
 
 end BitVec
