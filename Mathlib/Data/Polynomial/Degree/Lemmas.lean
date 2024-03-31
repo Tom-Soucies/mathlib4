@@ -173,7 +173,7 @@ theorem coeff_pow_of_natDegree_le (pn : p.natDegree ≤ n) :
     (p ^ m).coeff (m * n) = p.coeff n ^ m := by
   induction' m with m hm
   · simp
-  · rw [pow_succ', pow_succ', ← hm, Nat.succ_mul, coeff_mul_of_natDegree_le _ pn]
+  · rw [pow_succ, pow_succ, ← hm, Nat.succ_mul, coeff_mul_of_natDegree_le _ pn]
     refine' natDegree_pow_le.trans (le_trans _ (le_refl _))
     exact mul_le_mul_of_nonneg_left pn m.zero_le
 #align polynomial.coeff_pow_of_nat_degree_le Polynomial.coeff_pow_of_natDegree_le
@@ -295,10 +295,9 @@ theorem degree_map_eq_iff {f : R →+* S} {p : Polynomial R} :
   · simp [h]
   simp only [h, or_false]
   refine ⟨fun h2 ↦ ?_, degree_map_eq_of_leadingCoeff_ne_zero f⟩
-  have h3 : natDegree (map f p) = natDegree p
-  · simp_rw [natDegree, h2]
-  have h4 : map f p ≠ 0
-  · rwa [ne_eq, ← degree_eq_bot, h2, degree_eq_bot]
+  have h3 : natDegree (map f p) = natDegree p := by simp_rw [natDegree, h2]
+  have h4 : map f p ≠ 0 := by
+    rwa [ne_eq, ← degree_eq_bot, h2, degree_eq_bot]
   rwa [← coeff_natDegree, ← coeff_map, ← h3, coeff_natDegree, ne_eq, leadingCoeff_eq_zero]
 
 @[simp]
@@ -400,7 +399,7 @@ theorem natDegree_comp : natDegree (p.comp q) = natDegree p * natDegree q := by
     · simp only [p0, zero_comp, natDegree_zero, zero_mul]
     refine' le_antisymm natDegree_comp_le (le_natDegree_of_ne_zero _)
     simp only [coeff_comp_degree_mul_degree q0, p0, mul_eq_zero, leadingCoeff_eq_zero, or_self_iff,
-      ne_zero_of_natDegree_gt (Nat.pos_of_ne_zero q0), pow_ne_zero, Ne.def, not_false_iff]
+      ne_zero_of_natDegree_gt (Nat.pos_of_ne_zero q0), pow_ne_zero, Ne, not_false_iff]
 #align polynomial.nat_degree_comp Polynomial.natDegree_comp
 
 @[simp]
@@ -408,7 +407,7 @@ theorem natDegree_iterate_comp (k : ℕ) :
     (p.comp^[k] q).natDegree = p.natDegree ^ k * q.natDegree := by
   induction' k with k IH
   · simp
-  · rw [Function.iterate_succ_apply', natDegree_comp, IH, pow_succ, mul_assoc]
+  · rw [Function.iterate_succ_apply', natDegree_comp, IH, pow_succ', mul_assoc]
 #align polynomial.nat_degree_iterate_comp Polynomial.natDegree_iterate_comp
 
 theorem leadingCoeff_comp (hq : natDegree q ≠ 0) :

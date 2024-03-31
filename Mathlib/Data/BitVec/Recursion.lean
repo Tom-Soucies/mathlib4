@@ -10,7 +10,7 @@ import Mathlib.Data.Vector
   bit-by-bit implementation of those operations using the vector perspective.
 -/
 
-namespace Std.BitVec
+namespace BitVec
 
 variable {n : Nat}
 universe u
